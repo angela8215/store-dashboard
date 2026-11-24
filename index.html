@@ -3352,16 +3352,27 @@
     }
 
     window.jumpToDistrict = function(city, district) {
-      document.getElementById('filterCity').value = city;
-      updateFilterDropdowns('CITY');
-      document.getElementById('filterDistrict').value = district;
-      updateFilterDropdowns('DISTRICT');
-      if (activeMainTab !== 'overview') {
-        switchMainTab('overview', true);
-      }
-      refreshDashboard();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      showActionToast(`已切換至「${city} ${district}」`, '顯示該行政區的人力水位總覽與門市明細', 'info');
+      showLoading(
+        `正在載入「${city} ${district}」人力水位總覽...`,
+        '正在篩選該行政區 KPI 指標、三大趨勢圖與門市群組明細'
+      );
+
+      setTimeout(() => {
+        try {
+          document.getElementById('filterCity').value = city;
+          updateFilterDropdowns('CITY');
+          document.getElementById('filterDistrict').value = district;
+          updateFilterDropdowns('DISTRICT');
+          if (activeMainTab !== 'overview') {
+            switchMainTab('overview', true);
+          }
+          refreshDashboard();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          showActionToast(`✓ 已切換至「${city} ${district}」`, '顯示該行政區的人力水位總覽與門市明細', 'info');
+        } finally {
+          hideLoading();
+        }
+      }, 150);
     };
 
     // --- 12. CSV Export Engine (含 UTF-8 BOM 確保 Excel 開啟繁體中文不亂碼) ---
