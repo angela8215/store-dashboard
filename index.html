@@ -500,6 +500,7 @@
               <th class="py-2.5 px-3 whitespace-nowrap">現場開立水位</th>
               <th class="py-2.5 px-3 whitespace-nowrap">水位落差</th>
               <th class="py-2.5 px-3 whitespace-nowrap">已招募數</th>
+              <th class="py-2.5 px-3 whitespace-nowrap">區主管缺額</th>
               <th class="py-2.5 px-3 whitespace-nowrap">PM真實缺額</th>
               <th class="py-2.5 px-3 whitespace-nowrap">當月履歷數</th>
               <th class="py-2.5 px-3 whitespace-nowrap">平均單店投遞</th>
@@ -2416,7 +2417,10 @@
         const pmTarget = (shift === '早班' ? s.morning : shift === '晚班' ? s.evening : s.total);
 
         const bias = storeTarget - pmTarget;
+        const supDeficit = Math.max(0, storeTarget - hired);
+        const supDeficitPct = storeTarget > 0 ? ((supDeficit / storeTarget) * 100).toFixed(1) : '0.0';
         const pmDeficit = Math.max(0, pmTarget - hired);
+        const pmDeficitPct = pmTarget > 0 ? ((pmDeficit / pmTarget) * 100).toFixed(1) : '0.0';
 
         const appCount = DB.resumes.filter(r => cleanStoreKey(r.mainStore) === mKey && r.month === selectedMonth).length;
         const appPerSubStore = (appCount / operatingCount).toFixed(1);
@@ -2450,7 +2454,10 @@
           storeTarget: storeTarget,
           bias: bias,
           hired: hired,
+          supDeficit: supDeficit,
+          supDeficitPct: supDeficitPct,
           pmDeficit: pmDeficit,
+          pmDeficitPct: pmDeficitPct,
           appCount: appCount,
           appPerSubStore: appPerSubStore,
           statusText: statusText,
@@ -2500,7 +2507,8 @@
             ${r.bias >= 0 ? '+' : ''}${r.bias}
           </td>
           <td class="py-2.5 px-3 whitespace-nowrap">${r.hired}</td>
-          <td class="py-2.5 px-3 font-bold ${r.pmDeficit > 0 ? 'text-rose-600' : 'text-emerald-600'} whitespace-nowrap">${r.pmDeficit}</td>
+          <td class="py-2.5 px-3 font-bold ${r.supDeficit > 0 ? 'text-indigo-600' : 'text-emerald-600'} whitespace-nowrap">${r.supDeficit} <span class="text-[11px] font-semibold ${r.supDeficit > 0 ? 'text-indigo-500' : 'text-slate-400'}">(${r.supDeficitPct}%)</span></td>
+          <td class="py-2.5 px-3 font-bold ${r.pmDeficit > 0 ? 'text-rose-600' : 'text-emerald-600'} whitespace-nowrap">${r.pmDeficit} <span class="text-[11px] font-semibold ${r.pmDeficit > 0 ? 'text-rose-500' : 'text-slate-400'}">(${r.pmDeficitPct}%)</span></td>
           <td class="py-2.5 px-3 font-semibold text-slate-700 whitespace-nowrap">${r.appCount}</td>
           <td class="py-2.5 px-3 text-teal-600 font-bold whitespace-nowrap">${r.appPerSubStore} 份</td>
           <td class="py-2.5 px-3 whitespace-nowrap">${r.statusTag}</td>
@@ -2526,7 +2534,7 @@
         }).join('');
 
         detailTr.innerHTML = `
-          <td colspan="13" class="py-3 px-4">
+          <td colspan="14" class="py-3 px-4">
             <div class="flex flex-wrap items-center gap-2">
               <span class="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5 mr-1">
                 <i class="fa-solid fa-sitemap text-indigo-500"></i> 群組涵蓋門市明細（共 ${r.operatingCount} 間）：
@@ -3056,27 +3064,51 @@
         const pmDelta = pmRatioCurr - pmRatioPrev;
         const supDelta = supCurr.ratio - supPrev.ratio;
 
-        // 判斷該行政區是否有「主門市」（以智取店招募總覽 F欄「主要門市」標記與 H欄所屬主要門市為準，不因週報有子門市列而誤判）
+        // 判斷該行政區是否有「主門市」：
+        // 1) 若已載入「智取店招募總覽」(DB.groups)，必須在該表中有標記為「主要門市」的有效列（且若門市清單有營業狀態，需為營業中）；若該區在招募總覽與營業中門市清單皆無資料（如已撤店），則判定為無主門市！
+        // 2) 若未載入招募總覽，則檢查 PM需求表中的門市是否仍為「營業中」。
         const distGroupRows = DB.groups.filter(g => isGeoMatch(g.city, city) && isGeoMatch(g.district, district));
-        const hasMainInGroups = distGroupRows.some(g => g.isMainStoreRow);
-        const hasMainStore = (DB.groups.length > 0)
-          ? (distGroupRows.length > 0 ? hasMainInGroups : (pmRows.length > 0))
-          : (pmRows.length > 0);
+        const hasActiveStoreInGeo = (DB.stores.length === 0) || (activeStores.length > 0);
+        const hasMainInGroups = distGroupRows.some(g => {
+          if (!g.isMainStoreRow) return false;
+          if (DB.stores.length > 0) {
+            const st = DB.stores.find(s => cleanStoreKey(s.storeName) === cleanStoreKey(g.storeName));
+            if (st && st.status !== '營業中') return false;
+          }
+          return true;
+        });
+        const hasActivePmStore = pmRows.some(p => {
+          if (DB.stores.length === 0) return true;
+          const st = DB.stores.find(s => cleanStoreKey(s.storeName) === cleanStoreKey(p.mainStore));
+          return Boolean(st && st.status === '營業中');
+        });
 
-        // 若未有主門市，找出其門市掛在哪個主門市 / 行政區底下
+        const hasMainStore = hasActiveStoreInGeo && (
+          (DB.groups.length > 0)
+            ? hasMainInGroups
+            : hasActivePmStore
+        );
+
+        // 若未有主門市，區分「掛在他區主門市底下」或「該區目前無任何營業門市」
         let attachedToDesc = '';
-        if (!hasMainStore && distGroupRows.length > 0) {
-          const parentNames = new Set();
-          distGroupRows.forEach(g => {
-            const mainRow = DB.groups.find(m => m.isMainStoreRow && cleanStoreKey(m.mainStore) === cleanStoreKey(g.mainStore));
-            if (mainRow && mainRow.district) {
-              const distLabel = isGeoMatch(mainRow.city, city) ? mainRow.district : `${mainRow.city}${mainRow.district}`;
-              parentNames.add(`${distLabel}(${g.mainStore.replace(' - 智取店', '')})`);
-            } else if (g.mainStore) {
-              parentNames.add(g.mainStore.replace(' - 智取店', ''));
-            }
-          });
-          attachedToDesc = Array.from(parentNames).join('、');
+        let noMainStatusText = '未有主門市';
+        if (!hasMainStore) {
+          if (!hasActiveStoreInGeo || (DB.groups.length > 0 && distGroupRows.length === 0)) {
+            noMainStatusText = '無任何門市';
+            attachedToDesc = '該區目前無任何營業門市';
+          } else if (distGroupRows.length > 0) {
+            const parentNames = new Set();
+            distGroupRows.forEach(g => {
+              const mainRow = DB.groups.find(m => m.isMainStoreRow && cleanStoreKey(m.mainStore) === cleanStoreKey(g.mainStore));
+              if (mainRow && mainRow.district) {
+                const distLabel = isGeoMatch(mainRow.city, city) ? mainRow.district : `${mainRow.city}${mainRow.district}`;
+                parentNames.add(`${distLabel}(${g.mainStore.replace(' - 智取店', '')})`);
+              } else if (g.mainStore) {
+                parentNames.add(g.mainStore.replace(' - 智取店', ''));
+              }
+            });
+            attachedToDesc = Array.from(parentNames).join('、');
+          }
         }
 
         const crossItems = getCrossDistrictsFor(city, district);
@@ -3086,6 +3118,7 @@
           city,
           district,
           hasMainStore,
+          noMainStatusText,
           attachedToDesc,
           crossItems,
           crossDistrictStr: crossDistricts.length > 0 ? crossDistricts.join('、') : '-',
@@ -3122,7 +3155,9 @@
           r.bundledScore = 0;
           r.actionCode = 'NO_MAIN';
           r.actionLabel = '⛔ 不建議放津貼';
-          r.actionReason = r.attachedToDesc ? `未有主門市（掛於 ${r.attachedToDesc}）` : '該區未設主門市，不單獨配置津貼';
+          r.actionReason = r.noMainStatusText === '無任何門市'
+            ? '該區目前無任何營業門市，不配置津貼'
+            : (r.attachedToDesc ? `未有主門市（掛於 ${r.attachedToDesc}）` : '該區未設主門市，不單獨配置津貼');
           r.badgeClass = 'bg-slate-100 text-slate-600 border-slate-300';
           return;
         }
@@ -3291,7 +3326,7 @@
 
         const mainStoreStatusBadge = r.hasMainStore
           ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200 text-[11px] font-bold"><i class="fa-solid fa-circle-check text-[10px]"></i> 有主門市</span>`
-          : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold" title="${r.attachedToDesc ? '門市掛於：' + r.attachedToDesc : '該區無主門市'}"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> 未有主門市</span>`;
+          : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold" title="${r.attachedToDesc ? r.attachedToDesc : '該區無主門市'}"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> ${r.noMainStatusText || '未有主門市'}</span>`;
 
         tr.innerHTML = `
           <td class="py-2.5 px-3 font-bold ${r.hasMainStore ? 'text-slate-800' : 'text-slate-600'} whitespace-nowrap">
@@ -3423,7 +3458,7 @@
       const rows = latestAllowanceAnalysisRows.map(r => [
         r.city,
         r.district,
-        r.hasMainStore ? '有主門市' : '未有主門市',
+        r.hasMainStore ? '有主門市' : (r.noMainStatusText || '未有主門市'),
         r.crossDistrictStr,
         r.storeCount,
         r.currAllowance.toFixed(0),
@@ -3453,7 +3488,8 @@
       const headers = [
         '縣市', '行政區', '主要門市群組', '包含子門市清單', '區主管', '區經理',
         '營運店數', 'PM需要水位', '現場開立水位', '水位落差(開立-PM)',
-        '已招募數', 'PM真實缺額', '當月履歷數', '平均單店投遞(份)', '健康狀態'
+        '已招募數', '區主管缺額', '區主管缺額比(%)', 'PM真實缺額', 'PM真實缺額比(%)',
+        '當月履歷數', '平均單店投遞(份)', '健康狀態'
       ];
 
       const rows = latestDrilldownRows.map(r => [
@@ -3468,7 +3504,10 @@
         r.storeTarget,
         r.bias,
         r.hired,
+        r.supDeficit,
+        r.supDeficitPct + '%',
         r.pmDeficit,
+        r.pmDeficitPct + '%',
         r.appCount,
         r.appPerSubStore,
         r.statusText
