@@ -18,10 +18,10 @@
     .chart-container { position: relative; width: 100%; height: 320px; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
   <!-- Top Navigation Bar -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 py-4 flex flex-wrap items-center justify-between shadow-sm">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 py-3.5 flex flex-wrap items-center justify-between shadow-sm">
     <div class="flex items-center space-x-3">
       <div class="w-10 h-10 rounded-lg bg-teal-600 flex items-center justify-center text-white text-xl shadow">
         <i class="fa-solid fa-store"></i>
@@ -34,6 +34,9 @@
     </div>
     
     <div class="flex items-center space-x-3 mt-2 sm:mt-0">
+      <button id="exportAllowanceReportBtn" class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition flex items-center gap-1.5 shadow-sm">
+        <i class="fa-solid fa-file-excel"></i> 匯出全區津貼建議報表
+      </button>
       <button id="syncCloudBtn" class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition flex items-center gap-1.5 shadow-sm">
         <i class="fa-solid fa-cloud-arrow-down"></i> 重新同步 Google 試算表
       </button>
@@ -43,68 +46,129 @@
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-
-    <!-- Collapsible Upload Panel -->
-    <section id="uploadSection" class="glass-card rounded-2xl p-6 transition-all duration-300 border-indigo-200 bg-white">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <div>
-          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-            <i class="fa-solid fa-file-csv text-indigo-600"></i> 多檔案 CSV 智慧拖拉上傳
-          </h2>
-        </div>
-        <span class="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">可直接拖入多個 .csv 檔</span>
-      </div>
-
-      <!-- Drag & Drop Zone -->
-      <div id="dropZone" class="mt-4 border-2 border-dashed border-indigo-300 rounded-xl p-6 text-center hover:bg-indigo-50/50 transition bg-slate-50/50 relative">
-        <input type="file" id="fileInput" multiple accept=".csv" class="hidden">
-        <label for="fileInput" class="flex flex-col items-center justify-center space-y-3 cursor-pointer select-none">
-          <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl shadow-sm hover:scale-105 transition transform">
-            <i class="fa-solid fa-file-arrow-up"></i>
-          </div>
-          <div>
-            <p class="text-sm font-bold text-slate-700">點擊此處瀏覽檔案，或將 6 張 CSV 檔案拖曳進來</p>
-            <p class="text-xs text-slate-400 mt-1">支援多檔同時選取：週報表、履歷表、PM需求水位、門市群組對照、門市清單、津貼表</p>
-          </div>
-          <button type="button" onclick="document.getElementById('fileInput').click()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow transition flex items-center gap-1.5 pointer-events-auto">
-            <i class="fa-solid fa-folder-open"></i> 瀏覽並選取 CSV 檔案
+  <!-- Workspace Layout: Left Sidebar Navigation + Main Content Area -->
+  <div class="flex-1 flex flex-col md:flex-row">
+    <!-- Left Collapsible Sidebar -->
+    <aside id="leftSidebar" class="w-full md:w-56 bg-white border-b md:border-b-0 md:border-r border-slate-200 shrink-0 md:sticky md:top-[69px] md:h-[calc(100vh-69px)] z-30 transition-all duration-300 flex flex-col justify-between">
+      <div class="p-3 space-y-1.5 flex md:flex-col overflow-x-auto">
+        <div id="sidebarHeaderRow" class="hidden md:flex items-center justify-between px-2 pb-1.5">
+          <span class="sidebar-label text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">功能分頁導覽</span>
+          <button type="button" onclick="toggleLeftSidebar()" title="收合 / 展開側邊欄"
+            class="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition">
+            <i id="sidebarTopIcon" class="fa-solid fa-angles-left text-xs"></i>
           </button>
-        </label>
+        </div>
+
+        <button type="button" id="navTabOverview" onclick="switchMainTab('overview')" title="人力水位總覽"
+          class="flex-1 md:flex-none w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition bg-teal-50 text-teal-800 border border-teal-200 shadow-xs">
+          <span class="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs shrink-0 mx-auto md:mx-0">
+            <i class="fa-solid fa-chart-line"></i>
+          </span>
+          <div class="sidebar-label text-left overflow-hidden">
+            <div class="whitespace-nowrap">人力水位總覽</div>
+            <div class="text-[10px] font-normal text-teal-600 hidden md:block whitespace-nowrap">KPI・趨勢・門市明細</div>
+          </div>
+        </button>
+
+        <button type="button" id="navTabAllowance" onclick="switchMainTab('allowance')" title="次期津貼規劃"
+          class="flex-1 md:flex-none w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition text-slate-600 hover:bg-slate-100 border border-transparent">
+          <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs shrink-0 mx-auto md:mx-0">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </span>
+          <div class="sidebar-label text-left overflow-hidden">
+            <div class="whitespace-nowrap">次期津貼規劃</div>
+            <div class="text-[10px] font-normal text-slate-400 hidden md:block whitespace-nowrap">自訂權重・基準比較</div>
+          </div>
+        </button>
       </div>
 
-      <!-- Upload Status Indicators -->
-      <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
-        <div id="status_vacancy" class="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
+      <!-- Bottom Collapse / Expand Bar (Desktop) -->
+      <div class="hidden md:block p-3 border-t border-slate-100">
+        <button type="button" onclick="toggleLeftSidebar()" title="收合 / 展開側邊欄"
+          class="w-full flex items-center justify-center gap-2 px-2.5 py-2 rounded-lg text-[11px] font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition">
+          <i id="sidebarBottomIcon" class="fa-solid fa-angles-left text-xs"></i>
+          <span class="sidebar-label whitespace-nowrap">收合側邊導覽欄</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Container -->
+    <main class="flex-1 min-w-0 max-w-[1440px] mx-auto w-full px-4 sm:px-6 py-5 space-y-5">
+
+    <!-- Data Source Sync Status Bar + Collapsible Manual CSV Upload Drawer -->
+    <section id="uploadSection" class="glass-card rounded-2xl p-3.5 transition-all duration-300 border-slate-200 bg-white space-y-3">
+      <!-- Always-visible Compact Status Row -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
+            <i class="fa-solid fa-database text-emerald-600"></i> 試算表資料筆數檢核：
+          </span>
+          <span id="lastSyncTime" class="text-[11px] text-slate-400 hidden sm:inline">連線同步中...</span>
+        </div>
+        <button type="button" id="inlineToggleDropZoneBtn" onclick="toggleManualUploadDrawer()"
+          class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 border border-slate-200 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-file-arrow-up text-indigo-500"></i>
+          <span id="toggleDropZoneBtnText">展開手動 CSV 匯入</span>
+          <i id="toggleDropZoneChevron" class="fa-solid fa-chevron-down text-[10px]"></i>
+        </button>
+      </div>
+
+      <!-- 6 Data Source Count Badges (Always Visible for Quick Verification) -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
+        <div id="status_vacancy" class="px-2.5 py-2 rounded-lg border border-slate-200 bg-slate-50/80 flex items-center justify-between">
           <span class="text-slate-600 truncate"><i class="fa-solid fa-file-lines mr-1 text-slate-400"></i> 門市週報</span>
           <span class="badge font-bold text-slate-400">未上傳</span>
         </div>
-        <div id="status_resumes" class="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div id="status_resumes" class="px-2.5 py-2 rounded-lg border border-slate-200 bg-slate-50/80 flex items-center justify-between">
           <span class="text-slate-600 truncate"><i class="fa-solid fa-address-card mr-1 text-slate-400"></i> 履歷資料</span>
           <span class="badge font-bold text-slate-400">未上傳</span>
         </div>
-        <div id="status_pm_demand" class="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div id="status_pm_demand" class="px-2.5 py-2 rounded-lg border border-slate-200 bg-slate-50/80 flex items-center justify-between">
           <span class="text-slate-600 truncate"><i class="fa-solid fa-bullseye mr-1 text-slate-400"></i> PM需求水位</span>
           <span class="badge font-bold text-slate-400">未上傳</span>
         </div>
-        <div id="status_groups" class="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div id="status_groups" class="px-2.5 py-2 rounded-lg border border-slate-200 bg-slate-50/80 flex items-center justify-between">
           <span class="text-slate-600 truncate"><i class="fa-solid fa-diagram-project mr-1 text-slate-400"></i> 群組對照</span>
           <span class="badge font-bold text-slate-400">未上傳</span>
         </div>
-        <div id="status_stores" class="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div id="status_stores" class="px-2.5 py-2 rounded-lg border border-slate-200 bg-slate-50/80 flex items-center justify-between">
           <span class="text-slate-600 truncate"><i class="fa-solid fa-shop mr-1 text-slate-400"></i> 門市營運狀態</span>
           <span class="badge font-bold text-slate-400">未上傳</span>
         </div>
-        <div id="status_allowance" class="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div id="status_allowance" class="px-2.5 py-2 rounded-lg border border-slate-200 bg-slate-50/80 flex items-center justify-between">
           <span class="text-slate-600 truncate"><i class="fa-solid fa-coins mr-1 text-slate-400"></i> 津貼設定</span>
           <span class="badge font-bold text-slate-400">未上傳</span>
+        </div>
+      </div>
+
+      <!-- Collapsed-by-default Manual CSV Drag & Drop Drawer -->
+      <div id="manualDropWrapper" class="hidden pt-3 border-t border-slate-100">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-csv text-indigo-600"></i> 多檔案 CSV 智慧拖拉上傳（備援手動覆蓋）
+          </span>
+          <span class="text-[11px] text-slate-400">可直接拖入多個 .csv 檔</span>
+        </div>
+        <div id="dropZone" class="border-2 border-dashed border-indigo-300 rounded-xl p-5 text-center hover:bg-indigo-50/50 transition bg-slate-50/50 relative">
+          <input type="file" id="fileInput" multiple accept=".csv" class="hidden">
+          <label for="fileInput" class="flex flex-col items-center justify-center space-y-2.5 cursor-pointer select-none">
+            <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg shadow-sm hover:scale-105 transition transform">
+              <i class="fa-solid fa-file-arrow-up"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-slate-700">點擊此處瀏覽檔案，或將 6 張 CSV 檔案拖曳進來</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">支援多檔同時選取：週報表、履歷表、PM需求水位、門市群組對照、門市清單、津貼表</p>
+            </div>
+            <button type="button" onclick="document.getElementById('fileInput').click()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow transition flex items-center gap-1.5 pointer-events-auto">
+              <i class="fa-solid fa-folder-open"></i> 瀏覽並選取 CSV 檔案
+            </button>
+          </label>
         </div>
       </div>
     </section>
 
     <!-- Global Top Slicers & Filters Panel -->
-    <section class="glass-card rounded-2xl p-4 flex flex-wrap items-center gap-3.5 border-slate-200 bg-white">
+    <section id="globalSlicersSection" class="glass-card rounded-2xl p-4 flex flex-wrap items-center gap-3.5 border-slate-200 bg-white">
       <div class="flex items-center gap-2">
         <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center">
           <i class="fa-solid fa-filter mr-1.5 text-indigo-500"></i> 條件篩選：
@@ -151,7 +215,7 @@
       </div>
 
       <!-- Period / Month Slicer -->
-      <div class="flex items-center space-x-1.5">
+      <div id="topFilterMonthWrapper" class="flex items-center space-x-1.5">
         <label for="filterMonth" class="text-xs font-medium text-slate-600 whitespace-nowrap">分析月份：</label>
         <select id="filterMonth" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-teal-500 font-medium">
           <!-- Populated Chronologically -->
@@ -177,7 +241,21 @@
       </div>
     </section>
 
-    <!-- Top 5 Executive KPI Cards (Card 2 Layout Fully Optimized to Never Block Numbers) -->
+    <!-- Cross-District Linkage Banner (跨區共管提示) -->
+    <div id="crossDistrictBanner" class="hidden rounded-xl bg-amber-50 border border-amber-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-900 shadow-sm">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="px-2 py-0.5 rounded bg-amber-500 text-white font-bold text-[11px] flex items-center gap-1">
+          <i class="fa-solid fa-shuffle"></i> 跨區共管提示
+        </span>
+        <span id="crossDistrictText" class="font-medium"></span>
+        <div id="crossDistrictLinks" class="flex flex-wrap items-center gap-1.5"></div>
+      </div>
+      <span class="text-[11px] text-amber-700">資料來源：智取店招募總攬共管群組</span>
+    </div>
+
+        <!-- TAB 1: 人力水位總覽分頁 (KPI + 面向圖表) -->
+    <div id="overviewTabSection" class="space-y-6">
+<!-- Top 5 Executive KPI Cards (Card 2 Layout Fully Optimized to Never Block Numbers) -->
     <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       
       <!-- Card 1: PM Real Deficit Rate -->
@@ -211,8 +289,8 @@
             <span class="text-[10px] text-slate-400 font-medium whitespace-nowrap">班別落差分佈</span>
             <span id="kpiBiasBadge" class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-600 font-bold whitespace-nowrap shrink-0">水位吻合</span>
           </div>
-          <div id="kpiShiftBias" class="font-semibold text-slate-700 text-[11px] whitespace-nowrap overflow-visible">
-            早班: 0 | 晚班: 0
+          <div id="kpiShiftBias" class="font-semibold text-slate-700 text-[10.5px] tracking-tight whitespace-nowrap overflow-visible">
+            早班: 0 | 晚班: 0 | 其他: 0
           </div>
         </div>
       </div>
@@ -327,23 +405,41 @@
       </div>
     </section>
 
-    <!-- Store Drill-down Table Section WITH Integrated Synchronized Slicers -->
+
+<!-- Store Drill-down Table Section WITH Integrated Synchronized Slicers -->
     <section class="glass-card rounded-2xl p-5 space-y-4">
       <div class="flex flex-wrap items-center justify-between pb-3 border-b border-slate-100 gap-2">
-        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-          <i class="fa-solid fa-list-check text-indigo-600"></i> 主要門市群組細部明細
-        </h3>
-        <div class="text-xs text-slate-400">
-          共顯示 <span id="tableCount" class="font-bold text-slate-700">0</span> 個主要門市群組
+        <div class="flex flex-wrap items-center gap-2">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-indigo-600"></i> 主要門市群組細部明細
+          </h3>
+          <div id="storeTableRecBadge" class="hidden inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <span id="storeTableRecBadgeText"></span>
+            <button type="button" onclick="toggleRecActionFilter('ALL')" class="hover:text-rose-600 ml-1" title="清除建議類型連動"><i class="fa-solid fa-circle-xmark"></i></button>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-slate-400">
+            共顯示 <span id="tableCount" class="font-bold text-slate-700">0</span> 個主要門市群組
+          </span>
+          <button id="exportStoreTableBtn" class="px-3 py-1 text-xs font-semibold rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-file-csv"></i> 匯出門市明細 (.csv)
+          </button>
         </div>
       </div>
 
       <!-- Table Integrated Secondary Filter Bar (雙向同步，就地篩選不用往上滑) -->
       <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center gap-3 text-xs">
-        <!-- Quick Search -->
+        <!-- Quick Search with Clear (X) Button -->
         <div class="flex items-center space-x-1.5 flex-1 min-w-[200px]">
           <span class="text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-          <input type="text" id="tableSearchInput" placeholder="搜尋主要門市名稱關鍵字..." class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none shadow-sm">
+          <div class="relative w-full">
+            <input type="text" id="tableSearchInput" placeholder="搜尋主要門市或任一子門市名稱關鍵字..." class="w-full bg-white border border-slate-300 rounded-lg pl-2.5 pr-7 py-1.5 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none shadow-sm">
+            <button type="button" id="clearTableSearchBtn" onclick="clearTableSearchInput()" title="清除搜尋關鍵字"
+              class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition cursor-pointer">
+              <i class="fa-solid fa-circle-xmark text-sm"></i>
+            </button>
+          </div>
         </div>
 
         <!-- City Slicer (Synced) -->
@@ -417,6 +513,243 @@
       </div>
     </section>
 
+    </div>
+
+    <!-- TAB 2: 次期津貼規劃分頁 (預設隱藏，點擊左側「次期津貼規劃」切換顯示) -->
+    <div id="allowanceTabSection" class="hidden space-y-6">
+      <section id="allowanceDecisionCard" class="glass-card rounded-2xl p-5 space-y-5 border-t-4 border-t-indigo-600">
+        <!-- Header & Action Buttons -->
+        <div class="flex flex-wrap items-center justify-between pb-3 border-b border-slate-100 gap-3">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i> 次期津貼調整方向與全區缺工總覽
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              可自由設定「綜合缺工壓力指數權重」與「比較基準期」，設定完成後點擊<strong>「確認並計算」</strong>立即產生建議方案。
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center space-x-1.5 text-xs">
+              <label for="allowanceCityFilter" class="text-slate-500 font-medium whitespace-nowrap">縣市：</label>
+              <select id="allowanceCityFilter" class="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:ring-1 focus:ring-indigo-500">
+                <option value="ALL">全部縣市</option>
+              </select>
+            </div>
+
+            <div class="flex items-center space-x-1.5 text-xs">
+              <label for="allowanceDistrictFilter" class="text-slate-500 font-medium whitespace-nowrap">行政區：</label>
+              <select id="allowanceDistrictFilter" class="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:ring-1 focus:ring-indigo-500">
+                <option value="ALL">全部行政區</option>
+              </select>
+            </div>
+
+            <div class="flex items-center space-x-1.5 text-xs">
+              <label for="recActionFilter" class="text-slate-500 font-medium whitespace-nowrap">建議方向：</label>
+              <select id="recActionFilter" class="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:ring-1 focus:ring-indigo-500">
+                <option value="ALL">全部區域總覽</option>
+                <option value="UP">🔺 建議調升津貼</option>
+                <option value="KEEP">🟢 維持現行津貼</option>
+                <option value="DOWN">🔽 建議調降津貼</option>
+                <option value="NO_MAIN">⛔ 無主要門市 (不放津貼)</option>
+              </select>
+            </div>
+
+            <button type="button" id="resetAllowanceLocalFiltersBtn" title="重置津貼規劃查詢條件" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition flex items-center gap-1">
+              <i class="fa-solid fa-rotate-left text-[10px]"></i> 重置查詢
+            </button>
+
+            <button id="exportAllowanceTableBtn" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-download"></i> 匯出此分析表 (.csv)
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Planning Parameters Panel (權重設定 + 比較基準下拉選單 + 確認按鈕) -->
+        <div class="p-4 rounded-xl bg-indigo-50/60 border border-indigo-200 space-y-3.5">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+            
+            <!-- Left: 3 Weighted Index Dropdowns (0 ~ 5, step 0.5) -->
+            <div class="lg:col-span-7 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <i class="fa-solid fa-sliders text-indigo-600"></i> 綜合缺工壓力指數權重設定（比重 0 ～ 5，每 0.5 級距）
+                </span>
+                <span id="weightRatioPreview" class="text-[11px] font-semibold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200">
+                  換算佔比：35.0% / 35.0% / 30.0%
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div class="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+                  <label for="weightAppShortage" class="block text-[11px] font-bold text-slate-700 mb-1">
+                    1. 收件缺口比比重
+                  </label>
+                  <select id="weightAppShortage" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1.5 font-bold text-indigo-700 focus:ring-1 focus:ring-indigo-500">
+                  <option value="0.0">0.0</option>
+                  <option value="0.5">0.5</option>
+                  <option value="1.0">1.0</option>
+                  <option value="1.5">1.5</option>
+                  <option value="2.0">2.0</option>
+                  <option value="2.5">2.5</option>
+                  <option value="3.0">3.0</option>
+                  <option value="3.5">3.5</option>
+                  <option value="4.0">4.0</option>
+                  <option value="4.5">4.5</option>
+                  <option value="5.0">5.0</option>
+                  </select>
+                </div>
+
+                <div class="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+                  <label for="weightSupDeficit" class="block text-[11px] font-bold text-slate-700 mb-1">
+                    2. 區主管缺額比比重
+                  </label>
+                  <select id="weightSupDeficit" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1.5 font-bold text-indigo-700 focus:ring-1 focus:ring-indigo-500">
+                  <option value="0.0">0.0</option>
+                  <option value="0.5">0.5</option>
+                  <option value="1.0">1.0</option>
+                  <option value="1.5">1.5</option>
+                  <option value="2.0">2.0</option>
+                  <option value="2.5">2.5</option>
+                  <option value="3.0">3.0</option>
+                  <option value="3.5">3.5</option>
+                  <option value="4.0">4.0</option>
+                  <option value="4.5">4.5</option>
+                  <option value="5.0">5.0</option>
+                  </select>
+                </div>
+
+                <div class="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+                  <label for="weightPmDeficit" class="block text-[11px] font-bold text-slate-700 mb-1">
+                    3. PM真實缺額比比重
+                  </label>
+                  <select id="weightPmDeficit" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1.5 font-bold text-indigo-700 focus:ring-1 focus:ring-indigo-500">
+                  <option value="0.0">0.0</option>
+                  <option value="0.5">0.5</option>
+                  <option value="1.0">1.0</option>
+                  <option value="1.5">1.5</option>
+                  <option value="2.0">2.0</option>
+                  <option value="2.5">2.5</option>
+                  <option value="3.0">3.0</option>
+                  <option value="3.5">3.5</option>
+                  <option value="4.0">4.0</option>
+                  <option value="4.5">4.5</option>
+                  <option value="5.0">5.0</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Comparison Period Selectors + Confirm Button -->
+            <div class="lg:col-span-5 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <i class="fa-solid fa-code-compare text-indigo-600"></i> 比較基準（前期 ➔ 評估基準期）
+                </span>
+              </div>
+
+              <div class="flex flex-wrap sm:flex-nowrap items-end gap-2 bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+                <div class="flex-1 min-w-[110px]">
+                  <label for="compBasePrevSelect" class="block text-[11px] font-bold text-slate-600 mb-1">前期資料</label>
+                  <select id="compBasePrevSelect" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-md px-2 py-1.5 font-semibold text-slate-800 focus:ring-1 focus:ring-indigo-500">
+                    <!-- Populated dynamically with MTD / M-1 / M-2 / M-3 -->
+                  </select>
+                </div>
+
+                <div class="pb-2 text-slate-400 font-bold text-xs">➔</div>
+
+                <div class="flex-1 min-w-[110px]">
+                  <label for="compBaseCurrSelect" class="block text-[11px] font-bold text-slate-600 mb-1">評估基準期</label>
+                  <select id="compBaseCurrSelect" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-md px-2 py-1.5 font-semibold text-slate-800 focus:ring-1 focus:ring-indigo-500">
+                    <!-- Populated dynamically with MTD / M-1 / M-2 / M-3 -->
+                  </select>
+                </div>
+
+                <button type="button" id="applyAllowanceParamsBtn" class="px-4 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.99] transition shadow-sm flex items-center gap-1.5 whitespace-nowrap shrink-0 h-[32px]">
+                  <i class="fa-solid fa-check"></i> 確認並計算
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Active Parameter Status & Warning Strip -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-indigo-200/70 text-[11px]">
+            <div class="text-indigo-900 font-medium flex flex-wrap items-center gap-1.5">
+              <span class="px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold text-[10px]">目前套用參數</span>
+              <span>權重比重：<strong id="appliedWeightsLabel">收件 3.5 : 區主管 3.5 : PM 3.0</strong></span>
+              <span class="text-indigo-300">｜</span>
+              <span>比較基準：<strong id="compPrevMonthLabel" class="text-indigo-700">M-2</strong> ➔ <strong id="compCurrMonthLabel" class="text-indigo-700">M-1</strong></span>
+              <span class="text-indigo-300">｜</span>
+              <span>收件安全基準：<strong class="text-indigo-700">(區主管＋PM)平均缺額 × 1.62 份/人</strong></span>
+            </div>
+
+            <div id="incompleteMonthWarning" class="hidden inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-100 border border-amber-300 text-amber-900 font-medium">
+              <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+              <span>評估基準期為「MTD 當月進行中」，收件數尚未累計完整</span>
+              <button type="button" id="switchCompletedMonthBtn" class="ml-1 underline font-bold text-amber-950 hover:text-indigo-700">改用最新完整月</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Counters for Recommendations (4 Cards: 調升 / 維持 / 調降 / 無主要門市) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div id="cardRecUp" role="button" tabindex="0" onclick="toggleRecActionFilter('UP')" class="p-3 rounded-xl bg-rose-50/70 hover:bg-rose-100/80 border border-rose-200 flex items-center justify-between cursor-pointer transition select-none">
+            <div>
+              <span class="text-rose-800 font-bold flex items-center gap-1.5">🔺 建議調升津貼區域</span>
+              <span class="text-[11px] text-rose-600 mt-0.5 block">綜合壓力高 / 收件不足或缺額擴大</span>
+            </div>
+            <span id="recCountUp" class="text-xl font-black text-rose-600 whitespace-nowrap">0 區</span>
+          </div>
+          <div id="cardRecKeep" role="button" tabindex="0" onclick="toggleRecActionFilter('KEEP')" class="p-3 rounded-xl bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-200 flex items-center justify-between cursor-pointer transition select-none">
+            <div>
+              <span class="text-emerald-800 font-bold flex items-center gap-1.5">🟢 建議維持現狀區域</span>
+              <span class="text-[11px] text-emerald-600 mt-0.5 block">供需水位平衡 / 招募動能穩健</span>
+            </div>
+            <span id="recCountKeep" class="text-xl font-black text-emerald-600 whitespace-nowrap">0 區</span>
+          </div>
+          <div id="cardRecDown" role="button" tabindex="0" onclick="toggleRecActionFilter('DOWN')" class="p-3 rounded-xl bg-sky-50/70 hover:bg-sky-100/80 border border-sky-200 flex items-center justify-between cursor-pointer transition select-none">
+            <div>
+              <span class="text-sky-800 font-bold flex items-center gap-1.5">🔽 建議調降津貼區域</span>
+              <span class="text-[11px] text-sky-600 mt-0.5 block">人力已補齊且收件充裕，優化津貼成本</span>
+            </div>
+            <span id="recCountDown" class="text-xl font-black text-sky-600 whitespace-nowrap">0 區</span>
+          </div>
+          <div id="cardRecNoMain" role="button" tabindex="0" onclick="toggleRecActionFilter('NO_MAIN')" class="p-3 rounded-xl bg-slate-100/80 hover:bg-slate-200/70 border border-slate-300 flex items-center justify-between cursor-pointer transition select-none">
+            <div>
+              <span class="text-slate-800 font-bold flex items-center gap-1.5">⛔ 無主要門市區域</span>
+              <span class="text-[11px] text-slate-600 mt-0.5 block">僅有子門市掛於他區，不單獨放津貼</span>
+            </div>
+            <span id="recCountNoMain" class="text-xl font-black text-slate-700 whitespace-nowrap">0 區</span>
+          </div>
+        </div>
+
+        <!-- All-District Decision Table -->
+        <div class="overflow-x-auto max-h-[460px]">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200 sticky top-0 z-10">
+              <tr>
+                <th class="py-2.5 px-3 whitespace-nowrap">縣市 / 行政區</th>
+                <th class="py-2.5 px-3 whitespace-nowrap">主門市狀態</th>
+                <th class="py-2.5 px-3 whitespace-nowrap">跨區共管</th>
+                <th class="py-2.5 px-3 whitespace-nowrap">當前津貼</th>
+                <th id="thAppCompareHeader" class="py-2.5 px-3 whitespace-nowrap">單店收件 (上期 ➔ 當期)</th>
+                <th id="thWeightAppHeader" class="py-2.5 px-3 whitespace-nowrap">收件缺口比 (35%)</th>
+                <th id="thWeightSupHeader" class="py-2.5 px-3 whitespace-nowrap">區主管缺額比 (35%)</th>
+                <th id="thWeightPmHeader" class="py-2.5 px-3 whitespace-nowrap">PM真實缺額比 (30%)</th>
+                <th class="py-2.5 px-3 whitespace-nowrap">綜合壓力分數 (本區)</th>
+                <th class="py-2.5 px-3 whitespace-nowrap">綜合壓力分數 (含綑綁區)</th>
+                <th class="py-2.5 px-3 whitespace-nowrap">次期津貼調整方向</th>
+              </tr>
+            </thead>
+            <tbody id="allowanceDecisionTableBody" class="divide-y divide-slate-100">
+              <!-- Populated Dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
     <!-- Loading & Processing Modal Overlay -->
     <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden transition-opacity duration-300">
       <div class="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 border border-slate-100 text-center space-y-4">
@@ -438,7 +771,21 @@
       </div>
     </div>
 
-  </main>
+    <!-- Floating Action Toast Feedback (即時操作回饋提示氣泡) -->
+    <div id="actionToast" class="fixed bottom-6 right-6 z-50 pointer-events-none transform translate-y-4 opacity-0 transition-all duration-300">
+      <div class="bg-slate-900/95 text-white px-4 py-3 rounded-xl shadow-xl border border-slate-700 flex items-center gap-3 text-xs backdrop-blur-xs">
+        <span id="actionToastIcon" class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-circle-check"></i>
+        </span>
+        <div>
+          <div id="actionToastTitle" class="font-bold text-white">計算完成</div>
+          <div id="actionToastDesc" class="text-[11px] text-slate-300 mt-0.5">已依據最新設定重新計算</div>
+        </div>
+      </div>
+    </div>
+
+    </main>
+  </div>
 
   <!-- Global Application Logic Script -->
   <script>
@@ -461,26 +808,7 @@
       { name: '津貼List設定', type: 'allowance', baseUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQGTf-ONzAKhh2oksfp6C_qEXrreVYZbKI7RSN4c2DPXXfH6CI2ihGTIWSd0oKcRWnEAQfNZuq30iHA/pub?gid=515513040&single=true&output=csv' }
     ];
 
-    // 全域 JSONP 回調處理函式（徹底穿透本地 file:// 協定的 CORS 限制）
-    window.handleGasDataResponse = function(response) {
-      if (!response || response.status !== 'success') {
-        console.error('GAS API 回傳錯誤:', response);
-        alert('Google 試算表連線同步失敗：' + (response?.message || '未知錯誤'));
-        hideLoading();
-        return;
-      }
-      
-      const data = response.data;
-      let totalSheets = 0;
-      
-      // 依序處理 6 個分頁
-      if (data.vacancy && data.vacancy.length > 0) { classifyAndProcessCSV(data.vacancy, '缺額'); totalSheets++; }
-      if (data.resumes && data.resumes.length > 0) { classifyAndProcessCSV(data.resumes, '招募'); totalSheets++; }
-      if (data.pmDemand && data.pmDemand.length > 0) { classifyAndProcessCSV(data.pmDemand, '應排'); totalSheets++; }
-      if (data.groups && data.groups.length > 0) { classifyAndProcessCSV(data.groups, '智取店招募總攬'); totalSheets++; }
-      if (data.stores && data.stores.length > 0) { classifyAndProcessCSV(data.stores, 'SP info'); totalSheets++; }
-      if (data.allowance && data.allowance.length > 0) { classifyAndProcessCSV(data.allowance, '津貼List'); totalSheets++; }
-
+    function finalizeGasDashboardSync(totalSheets) {
       document.getElementById('loadingTitle').textContent = '跨表關聯中...';
       document.getElementById('loadingDetail').textContent = '正在執行月末存量校準、組織層級關聯與圖表重算...';
 
@@ -501,6 +829,56 @@
           hideLoading();
         }
       }, 150);
+    }
+
+    // 全域 JSONP 回調處理函式（徹底穿透本地 file:// 協定的 CORS 限制）
+    window.handleGasDataResponse = function(response) {
+      if (!response || response.status !== 'success') {
+        console.error('GAS API 回傳錯誤:', response);
+        alert('Google 試算表連線同步失敗：' + (response?.message || '未知錯誤'));
+        hideLoading();
+        return;
+      }
+      
+      const data = response.data;
+      let totalSheets = 0;
+      // 清除初始 Demo 群組資料，避免若尚未更新 GAS 部署時殘留假資料
+      DB.groups = [];
+      
+      // 依序處理 6 個分頁（直接傳入明確的分頁類型，避免標題名稱微調導致辨識遺漏）
+      if (data.vacancy && data.vacancy.length > 0) { classifyAndProcessCSV(data.vacancy, '缺額', 'vacancy'); totalSheets++; }
+      if (data.resumes && data.resumes.length > 0) { classifyAndProcessCSV(data.resumes, '招募', 'resumes'); totalSheets++; }
+      if (data.pmDemand && data.pmDemand.length > 0) { classifyAndProcessCSV(data.pmDemand, '應排', 'pmDemand'); totalSheets++; }
+      if (data.stores && data.stores.length > 0) { classifyAndProcessCSV(data.stores, 'SP info', 'stores'); totalSheets++; }
+      if (data.allowance && data.allowance.length > 0) { classifyAndProcessCSV(data.allowance, '津貼List', 'allowance'); totalSheets++; }
+
+      if (data.groups && data.groups.length > 0) {
+        classifyAndProcessCSV(data.groups, '智取店招募總覽', 'groups');
+        totalSheets++;
+        finalizeGasDashboardSync(totalSheets);
+      } else {
+        // 若舊版 GAS 腳本尚未將「智取店招募總攬」更名為「智取店招募總覽」，自動從發布的 CSV 連結補抓該分頁
+        const grpSource = REMOTE_CSV_SOURCES.find(s => s.type === 'groups');
+        if (grpSource) {
+          Papa.parse(`${grpSource.baseUrl}&_cacheBuster=${Date.now()}`, {
+            download: true,
+            header: false,
+            skipEmptyLines: true,
+            complete: function(results) {
+              if (results.data && results.data.length > 1) {
+                classifyAndProcessCSV(results.data, '智取店招募總覽', 'groups');
+                totalSheets++;
+              }
+              finalizeGasDashboardSync(totalSheets);
+            },
+            error: function() {
+              finalizeGasDashboardSync(totalSheets);
+            }
+          });
+        } else {
+          finalizeGasDashboardSync(totalSheets);
+        }
+      }
     };
 
     function fetchRemoteGoogleSheetsData() {
@@ -545,7 +923,7 @@
             complete: function(results) {
               loadedCount++;
               updateLoadingProgress(loadedCount, total, source.name);
-              classifyAndProcessCSV(results.data, source.name);
+              classifyAndProcessCSV(results.data, source.name, source.type);
               resolve({ success: true, name: source.name });
             },
             error: function(err) {
@@ -636,6 +1014,27 @@
         return `${year}/${month}`;
       }
       return null;
+    }
+
+    // 計算指定月份 (YYYY/MM) 相對於當下系統真實月份的距離標籤：MTD / M-1 / M-2 / M-3 ...
+    function getRelativeMonthCode(ymStr) {
+      if (!ymStr || !ymStr.includes('/')) return ymStr || '';
+      const [y, m] = ymStr.split('/').map(Number);
+      if (!y || !m) return ymStr;
+      const now = new Date();
+      const currTotalMonths = now.getFullYear() * 12 + (now.getMonth() + 1);
+      const targetTotalMonths = y * 12 + m;
+      const diff = currTotalMonths - targetTotalMonths;
+      if (diff === 0) return 'MTD';
+      if (diff > 0) return `M-${diff}`;
+      return `M+${Math.abs(diff)}`;
+    }
+
+    // 組合完整顯示標籤，例如：MTD (2026/11) 或 M-1 (2026/10)
+    function formatMonthWithCode(ymStr, statusNote = '') {
+      if (!ymStr) return '';
+      const code = getRelativeMonthCode(ymStr);
+      return statusNote ? `${code} (${ymStr} · ${statusNote})` : `${code} (${ymStr})`;
     }
 
     // --- 2. Master Data Storage ---
@@ -809,6 +1208,55 @@
       if (overlay) overlay.classList.add('hidden');
     }
 
+    let toastTimer = null;
+    function showActionToast(title, desc = '', type = 'success') {
+      const toast = document.getElementById('actionToast');
+      const iconEl = document.getElementById('actionToastIcon');
+      const titleEl = document.getElementById('actionToastTitle');
+      const descEl = document.getElementById('actionToastDesc');
+      if (!toast || !titleEl) return;
+
+      titleEl.textContent = title;
+      if (descEl) {
+        descEl.textContent = desc;
+        descEl.style.display = desc ? 'block' : 'none';
+      }
+
+      if (iconEl) {
+        if (type === 'loading') {
+          iconEl.className = 'w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0';
+          iconEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        } else if (type === 'info') {
+          iconEl.className = 'w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0';
+          iconEl.innerHTML = '<i class="fa-solid fa-filter"></i>';
+        } else {
+          iconEl.className = 'w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0';
+          iconEl.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        }
+      }
+
+      toast.classList.remove('translate-y-4', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      if (toastTimer) clearTimeout(toastTimer);
+      if (type !== 'loading') {
+        toastTimer = setTimeout(() => {
+          toast.classList.remove('translate-y-0', 'opacity-100');
+          toast.classList.add('translate-y-4', 'opacity-0');
+        }, 2400);
+      }
+    }
+
+    // 讓表格區塊產生短暫高亮閃動，明確提示資料已刷新
+    function flashSectionUpdate(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.classList.add('ring-2', 'ring-indigo-400', 'transition-all', 'duration-300');
+      setTimeout(() => {
+        el.classList.remove('ring-2', 'ring-indigo-400');
+      }, 650);
+    }
+
     // --- 4. CSV File Parsing & Smart Identification ---
     function setupFileUploader() {
       const dropZone = document.getElementById('dropZone');
@@ -900,15 +1348,27 @@
       }, 60);
     }
 
-    function classifyAndProcessCSV(rawRows, filename) {
+    function classifyAndProcessCSV(rawRows, filename, forcedType = null) {
       if (!rawRows || rawRows.length < 2) return;
 
       let headerRowIndex = 0;
-      let matchedType = null;
+      let matchedType = forcedType;
 
       for (let r = 0; r < Math.min(3, rawRows.length); r++) {
         const rowStr = rawRows[r].join(',').toLowerCase();
-        
+        if (matchedType === 'vacancy') {
+          if (rowStr.includes('門市名稱')) { headerRowIndex = r; break; }
+          if (rawRows[r+1]?.join(',').includes('門市名稱')) { headerRowIndex = r + 1; break; }
+          continue;
+        }
+        if (matchedType) {
+          if (rowStr.includes('縣市') || rowStr.includes('門市') || rowStr.includes('建檔') || rowStr.includes('區域') || rowStr.includes('行政區')) {
+            headerRowIndex = r;
+            break;
+          }
+          continue;
+        }
+
         if ((rowStr.includes('人力水位') || rowStr.includes('缺額人數')) && (rowStr.includes('門市名稱') || rawRows[r+1]?.join(',').includes('門市名稱'))) {
           matchedType = 'vacancy';
           headerRowIndex = rowStr.includes('門市名稱') ? r : r + 1;
@@ -924,7 +1384,7 @@
           headerRowIndex = r;
           break;
         }
-        if (rowStr.includes('主要門市') && rowStr.includes('所屬主要門市') && rowStr.includes('共管店數')) {
+        if ((rowStr.includes('所屬主要門市') || rowStr.includes('主要門市')) && (rowStr.includes('店名') || rowStr.includes('門市名稱')) && !rowStr.includes('pm') && !rowStr.includes('需求水位')) {
           matchedType = 'groups';
           headerRowIndex = r;
           break;
@@ -951,9 +1411,9 @@
       for (let i = headerRowIndex + 1; i < rawRows.length; i++) {
         const r = rawRows[i];
         if (r.length === 0 || (r.length === 1 && !r[0])) continue;
-        const obj = {};
+        const obj = { _rawCols: r.map(c => normalizeText(c)) };
         headers.forEach((h, idx) => {
-          obj[h] = r[idx] !== undefined ? normalizeText(r[idx]) : '';
+          if (h) obj[h] = r[idx] !== undefined ? normalizeText(r[idx]) : '';
         });
         dataRows.push(obj);
       }
@@ -1052,11 +1512,43 @@
         DB.pmDemand = rows;
       } else if (type === 'groups') {
         const rows = [];
+        let lastCity = '';
         data.forEach(r => {
-          const storeName = normalizeText(r['店名'] || r['門市名稱']);
-          const mainStore = normalizeText(r['所屬主要門市'] || r['主要門市']);
-          const supervisor = normalizeText(r['區主管']);
-          const manager = normalizeText(r['區經理']);
+          const cols = r._rawCols || [];
+          // 智取店招募總覽實際結構：
+          // A欄(0)=縣市, B欄(1)=區域/行政區, C欄(2)=店名/門市名稱, D欄(3)=區主管, E欄(4)=區經理,
+          // F欄(5)=主要門市標記('主要門市'或空白), G欄(6)=群組負責人標籤(如 Avery Chang(內埔學)), H欄(7)=所屬主要門市(如 內埔學人 - 智取店)
+          let city = normalizeText(r['縣市'] || cols[0] || '');
+          if (city) lastCity = city;
+          else city = lastCity;
+          const district = normalizeText(r['行政區'] || r['區域'] || cols[1] || '');
+          const storeName = normalizeText(r['店名'] || r['門市名稱'] || cols[2] || '');
+          const supervisor = normalizeText(r['區主管'] || cols[3] || '');
+          const manager = normalizeText(r['區經理'] || cols[4] || '');
+          const roleFlag = normalizeText(cols[5] || '');
+
+          // 尋找所屬主要門市名稱：優先讀取明確欄位，否則從 H欄(7) / G欄(6) 中尋找含「智取店」或非括號負責人代碼的門市名稱
+          let mainStore = normalizeText(r['所屬主要門市'] || r['主要門市名稱'] || '');
+          if (!mainStore) {
+            for (let idx = cols.length - 1; idx >= 6; idx--) {
+              const cand = normalizeText(cols[idx] || '');
+              if (cand && cand !== '主要門市' && (cand.includes('智取店') || cand.includes('-') || cand.includes('－'))) {
+                mainStore = cand;
+                break;
+              }
+            }
+          }
+          if (!mainStore) {
+            const fallbackCol = normalizeText(cols[7] || cols[6] || r['主要門市'] || '');
+            if (fallbackCol && fallbackCol !== '主要門市' && !fallbackCol.includes('(')) {
+              mainStore = fallbackCol;
+            }
+          }
+          if (!mainStore || mainStore === '主要門市') {
+            mainStore = storeName;
+          }
+
+          if (!storeName && !mainStore) return;
 
           if (isExcludedEntity(supervisor, manager, storeName, '') || isExcludedEntity(supervisor, manager, mainStore, '')) {
             excludedStoreKeys.add(cleanStoreKey(storeName));
@@ -1064,14 +1556,17 @@
             return;
           }
 
+          const isMainStoreRow = (roleFlag === '主要門市') || (cleanStoreKey(storeName) === cleanStoreKey(mainStore));
+
           rows.push({
             storeName: storeName,
             mainStore: mainStore,
-            city: normalizeText(r['縣市']),
-            district: normalizeText(r['行政區']),
+            city: city,
+            district: district,
             supervisor: supervisor,
             manager: manager,
-            count: parseFloat(r['共管店數'] || 1) || 1
+            isMainStoreRow: isMainStoreRow,
+            count: 1
           });
         });
         DB.groups = rows;
@@ -1294,20 +1789,62 @@
         if (tblSup) tblSup.value = curSup;
       }
 
-      // Initialize Months and Vendors
+      // Initialize Months and Vendors (自動偵測進行中月份，預設選取「最新完整月」以確保基準準確)
       if (sourceChanged === 'INIT') {
         monthSelect.innerHTML = '';
-        const totalMonths = DB.periods.length;
-        DB.periods.forEach((mStr, idx) => {
-          let label = mStr;
-          if (idx === totalMonths - 1) label = `M (${mStr})`;
-          else if (idx === totalMonths - 2) label = `M-1 (${mStr})`;
-          else if (idx === totalMonths - 3) label = `M-2 (${mStr})`;
+        const now = new Date();
+        const currentCalendarYM = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const completedPeriods = DB.periods.filter(p => p < currentCalendarYM);
+        const defaultTargetMonth = completedPeriods.length > 0
+          ? completedPeriods[completedPeriods.length - 1]
+          : DB.periods[DB.periods.length - 1];
+
+        DB.periods.forEach((mStr) => {
+          let statusNote = '';
+          if (mStr === currentCalendarYM) {
+            statusNote = '當月進行中 · 未完整';
+          } else if (mStr === defaultTargetMonth) {
+            statusNote = '最新完整月';
+          }
+          const label = formatMonthWithCode(mStr, statusNote);
           monthSelect.innerHTML += `<option value="${mStr}">${label}</option>`;
         });
-        if (DB.periods.length > 0) {
-          monthSelect.value = DB.periods[DB.periods.length - 1];
+        if (defaultTargetMonth) {
+          monthSelect.value = defaultTargetMonth;
         }
+
+        // 同步初始化「次期津貼規劃」分頁中的比較基準下拉選單 (MTD / M-1 / M-2 / M-3...)
+        const prevSelEl = document.getElementById('compBasePrevSelect');
+        const currSelEl = document.getElementById('compBaseCurrSelect');
+        if (prevSelEl && currSelEl) {
+          prevSelEl.innerHTML = '<option value="">無比較前期</option>';
+          currSelEl.innerHTML = '';
+          DB.periods.forEach((mStr) => {
+            let statusNote = '';
+            if (mStr === currentCalendarYM) statusNote = '進行中';
+            else if (mStr === defaultTargetMonth) statusNote = '最新完整月';
+            const optLabel = formatMonthWithCode(mStr, statusNote);
+            prevSelEl.innerHTML += `<option value="${mStr}">${optLabel}</option>`;
+            currSelEl.innerHTML += `<option value="${mStr}">${optLabel}</option>`;
+          });
+
+          const targetCurr = defaultTargetMonth || DB.periods[DB.periods.length - 1];
+          const targetCurrIdx = DB.periods.indexOf(targetCurr);
+          const targetPrev = targetCurrIdx > 0 ? DB.periods[targetCurrIdx - 1] : '';
+
+          currSelEl.value = targetCurr;
+          prevSelEl.value = targetPrev;
+          ALLOWANCE_CONFIG.currMonth = targetCurr;
+          ALLOWANCE_CONFIG.prevMonth = targetPrev || null;
+        }
+
+        const wAppEl = document.getElementById('weightAppShortage');
+        const wSupEl = document.getElementById('weightSupDeficit');
+        const wPmEl = document.getElementById('weightPmDeficit');
+        if (wAppEl) wAppEl.value = ALLOWANCE_CONFIG.wApp.toFixed(1);
+        if (wSupEl) wSupEl.value = ALLOWANCE_CONFIG.wSup.toFixed(1);
+        if (wPmEl) wPmEl.value = ALLOWANCE_CONFIG.wPm.toFixed(1);
+        updateWeightRatioPreview();
 
         const vendors = new Set();
         DB.resumes.forEach(r => r.vendor && vendors.add(r.vendor));
@@ -1532,14 +2069,19 @@
       document.getElementById('kpiAlignmentPct').textContent = hasPmData ? `(${biasPct >= 0 ? '+' : ''}${biasPct.toFixed(1)}%)` : '';
       const morningBias = morningTargetSum - pmMorning;
       const eveningBias = eveningTargetSum - pmEvening;
-      document.getElementById('kpiShiftBias').textContent = hasPmData ? `早班: ${morningBias >= 0 ? '+' : ''}${morningBias.toLocaleString()} | 晚班: ${eveningBias >= 0 ? '+' : ''}${eveningBias.toLocaleString()}` : '請匯入需求表';
+      const totalAllShiftsBias = (monthlyVacancyRows.reduce((acc, v) => acc + (v.storeTargetTotal || (v.morningTarget + v.eveningTarget)), 0)) - (pmMorning + pmEvening);
+      const otherBias = totalAllShiftsBias - (morningBias + eveningBias);
+      document.getElementById('kpiShiftBias').textContent = hasPmData
+        ? `早班: ${morningBias >= 0 ? '+' : ''}${morningBias.toLocaleString()} | 晚班: ${eveningBias >= 0 ? '+' : ''}${eveningBias.toLocaleString()} | 其他: ${otherBias >= 0 ? '+' : ''}${otherBias.toLocaleString()}`
+        : '請匯入需求表';
       
       const shiftSummaryElem = document.getElementById('shiftBiasSummary');
       if (shiftSummaryElem) {
         if (!hasPmData) {
           shiftSummaryElem.textContent = '未匯入 PM 需求表';
         } else {
-          shiftSummaryElem.innerHTML = `早班落差: <strong class="${morningBias > 0 ? 'text-amber-600' : morningBias < 0 ? 'text-rose-600' : 'text-emerald-600'}">${morningBias >= 0 ? '+' : ''}${morningBias.toLocaleString()}</strong> | 晚班落差: <strong class="${eveningBias > 0 ? 'text-amber-600' : eveningBias < 0 ? 'text-rose-600' : 'text-emerald-600'}">${eveningBias >= 0 ? '+' : ''}${eveningBias.toLocaleString()}</strong>`;
+          const otherColor = otherBias > 0 ? 'text-amber-600' : otherBias < 0 ? 'text-rose-600' : 'text-emerald-600';
+          shiftSummaryElem.innerHTML = `早班: <strong class="${morningBias > 0 ? 'text-amber-600' : morningBias < 0 ? 'text-rose-600' : 'text-emerald-600'}">${morningBias >= 0 ? '+' : ''}${morningBias.toLocaleString()}</strong> | 晚班: <strong class="${eveningBias > 0 ? 'text-amber-600' : eveningBias < 0 ? 'text-rose-600' : 'text-emerald-600'}">${eveningBias >= 0 ? '+' : ''}${eveningBias.toLocaleString()}</strong> | 其他: <strong class="${otherColor}">${otherBias >= 0 ? '+' : ''}${otherBias.toLocaleString()}</strong>`;
         }
       }
 
@@ -1571,8 +2113,17 @@
       elasTag.className = elasticityTagClass;
       elasTag.textContent = elasticityTagText;
 
+      if (activeMainTab === 'overview') {
+        renderCrossDistrictBanner(city, district);
+      } else {
+        document.getElementById('crossDistrictBanner')?.classList.add('hidden');
+      }
+      if (activeMainTab === 'allowance' || latestAllowanceAnalysisRows.length === 0) {
+        computeAllDistrictAllowanceAnalysis(selectedMonth, 'ALL', 'ALL', 'ALL', 'ALL', 'ALL');
+      }
       renderCharts(city, district, shift, vendor, activeStoreCount, selectedMonth, supervisor, manager);
-      renderDrilldownTable(city, district, selectedMonth, shift, supervisor, manager);
+      const drillMonth = (activeMainTab === 'allowance' && ALLOWANCE_CONFIG.currMonth) ? ALLOWANCE_CONFIG.currMonth : selectedMonth;
+      renderDrilldownTable(city, district, drillMonth, shift, supervisor, manager);
     }
 
     function calculateAvgAllowance(city, district, monthStr) {
@@ -1607,11 +2158,7 @@
 
     // --- 7. Chart Visualizations ---
     function renderCharts(city, district, shift, vendor, activeStoreCount, selectedMonth, supervisor, manager) {
-      const labels = DB.periods.map((p, idx) => {
-        if (idx === DB.periods.length - 1) return `M (${p})`;
-        if (idx === DB.periods.length - 2) return `M-1 (${p})`;
-        return `M-2 (${p})`;
-      });
+      const labels = DB.periods.map(p => formatMonthWithCode(p));
 
       const allowanceTrend = DB.periods.map(p => calculateAvgAllowance(city, district, p));
       const appsTrend = DB.periods.map(p => calculateMonthAppsPerStore(city, district, p, shift, vendor, activeStoreCount, supervisor, manager));
@@ -1777,19 +2324,72 @@
 
       const searchKeyword = (document.getElementById('tableSearchInput')?.value || '').trim().toLowerCase();
       const statusFilter = document.getElementById('tblFilterStatus')?.value || 'ALL';
+      const recActionFilter = document.getElementById('recActionFilter')?.value || 'ALL';
+
+      // 若上方「津貼調整方向」有選定特定類型（UP / KEEP / DOWN），取得符合該類型的縣市+行政區集合
+      let allowedRecGeoSet = null;
+      const recBadgeEl = document.getElementById('storeTableRecBadge');
+      const recBadgeTextEl = document.getElementById('storeTableRecBadgeText');
+
+      if (recActionFilter !== 'ALL') {
+        allowedRecGeoSet = new Set();
+        latestAllowanceAnalysisRows.forEach(r => {
+          if (r.actionCode === recActionFilter) {
+            allowedRecGeoSet.add(`${normalizeText(r.city)}|${normalizeText(r.district)}`);
+          }
+        });
+        if (recBadgeEl && recBadgeTextEl) {
+          const labelMap = {
+            'UP': '連動篩選：🔺 建議調升津貼區域門市',
+            'KEEP': '連動篩選：🟢 建議維持現狀區域門市',
+            'DOWN': '連動篩選：🔽 建議調降津貼區域門市'
+          };
+          recBadgeTextEl.textContent = labelMap[recActionFilter] || '';
+          recBadgeEl.classList.remove('hidden');
+        }
+      } else if (recBadgeEl) {
+        recBadgeEl.classList.add('hidden');
+      }
 
       const currentMonthVac = getMonthEndVacancyRows(selectedMonth, city, district, supervisor, manager);
 
-      // Match PM Demand Stores
+      // 預先建立每個主門市群組底下的所有門市清單（主門市 + 所有子門市）
+      const groupMembersMap = new Map();
+      DB.groups.forEach(g => {
+        const mk = cleanStoreKey(g.mainStore);
+        if (!mk) return;
+        if (!groupMembersMap.has(mk)) groupMembersMap.set(mk, []);
+        const list = groupMembersMap.get(mk);
+        if (!list.some(x => cleanStoreKey(x.storeName) === cleanStoreKey(g.storeName))) {
+          list.push({
+            storeName: g.storeName,
+            city: g.city || '',
+            district: g.district || '',
+            isMain: g.isMainStoreRow || (cleanStoreKey(g.storeName) === mk)
+          });
+        }
+      });
+      groupMembersMap.forEach(list => {
+        list.sort((a, b) => (a.isMain === b.isMain ? 0 : a.isMain ? -1 : 1));
+      });
+
+      // Match PM Demand Stores（支援搜尋主要門市名稱或任一子門市名稱）
       let matchedStores = DB.pmDemand.filter(p => {
         if (!isGeoMatch(p.city, city)) return false;
         if (!isGeoMatch(p.district, district)) return false;
+        if (allowedRecGeoSet && !allowedRecGeoSet.has(`${normalizeText(p.city)}|${normalizeText(p.district)}`)) return false;
         const org = getStoreOrg(p.mainStore);
         const actualSup = p.supervisor && p.supervisor !== '-' ? p.supervisor : org.supervisor;
         const actualMgr = p.manager && p.manager !== '-' ? p.manager : org.manager;
         if (!isPersonMatch(actualSup, supervisor)) return false;
         if (!isPersonMatch(actualMgr, manager)) return false;
-        if (searchKeyword && !p.mainStore.toLowerCase().includes(searchKeyword)) return false;
+        if (searchKeyword) {
+          const mk = cleanStoreKey(p.mainStore);
+          const members = groupMembersMap.get(mk) || [{ storeName: p.mainStore }];
+          const hitMain = p.mainStore.toLowerCase().includes(searchKeyword);
+          const hitMember = members.some(m => m.storeName.toLowerCase().includes(searchKeyword));
+          if (!hitMain && !hitMember) return false;
+        }
         return true;
       });
 
@@ -1798,7 +2398,14 @@
 
       matchedStores.forEach(s => {
         const mKey = cleanStoreKey(s.mainStore);
-        const operatingCount = DB.groups.filter(g => cleanStoreKey(g.mainStore) === mKey).length || 1;
+        const members = groupMembersMap.get(mKey) || [{
+          storeName: s.mainStore,
+          city: s.city,
+          district: s.district,
+          isMain: true
+        }];
+        const subStoresOnly = members.filter(m => !m.isMain);
+        const operatingCount = members.length || 1;
         const org = getStoreOrg(s.mainStore);
         const dispSup = s.supervisor && s.supervisor !== '-' ? s.supervisor : (org.supervisor || '-');
         const dispMgr = s.manager && s.manager !== '-' ? s.manager : (org.manager || '-');
@@ -1826,10 +2433,16 @@
 
         if (statusFilter !== 'ALL' && statusText !== statusFilter) return;
 
+        const autoExpand = Boolean(searchKeyword && subStoresOnly.some(m => m.storeName.toLowerCase().includes(searchKeyword)));
+
         rowsToRender.push({
+          mKey: mKey,
           city: s.city,
           district: s.district,
           mainStore: s.mainStore,
+          members: members,
+          subStoresStr: subStoresOnly.length > 0 ? subStoresOnly.map(m => m.storeName).join('、') : '-',
+          autoExpand: autoExpand,
           dispSup: dispSup,
           dispMgr: dispMgr,
           operatingCount: operatingCount,
@@ -1840,18 +2453,32 @@
           pmDeficit: pmDeficit,
           appCount: appCount,
           appPerSubStore: appPerSubStore,
+          statusText: statusText,
           statusTag: statusTag
         });
       });
 
+      latestDrilldownRows = rowsToRender;
       document.getElementById('tableCount').textContent = rowsToRender.length;
 
-      rowsToRender.forEach(r => {
+      rowsToRender.forEach((r, idx) => {
+        const detailRowId = `subStoresRow_${idx}`;
+        const iconId = `subStoresIcon_${idx}`;
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50 transition border-b border-slate-100';
         tr.innerHTML = `
           <td class="py-2.5 px-3 font-medium text-slate-800 whitespace-nowrap">${r.city} ${r.district}</td>
-          <td class="py-2.5 px-3 font-semibold text-indigo-600 whitespace-nowrap">${r.mainStore}</td>
+          <td class="py-2.5 px-3 font-semibold text-indigo-600 whitespace-nowrap">
+            <button type="button" onclick="toggleSubStoresRow('${detailRowId}', '${iconId}')"
+              title="點擊展開 / 收合此群組包含的所有子門市"
+              class="inline-flex items-center gap-1.5 text-left hover:text-indigo-800 hover:underline decoration-dotted cursor-pointer group">
+              <i id="${iconId}" class="fa-solid ${r.autoExpand ? 'fa-chevron-down' : 'fa-chevron-right'} text-[10px] text-indigo-400 group-hover:text-indigo-700 w-3"></i>
+              <span>${r.mainStore}</span>
+              ${r.operatingCount > 1
+                ? `<span class="px-1.5 py-0.2 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200 text-[10px] font-bold">+${r.operatingCount - 1}子店</span>`
+                : ''}
+            </button>
+          </td>
           <td class="py-2.5 px-3 whitespace-nowrap">
             <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 whitespace-nowrap">
               <i class="fa-solid fa-user-tie text-[9px]"></i> ${r.dispSup}
@@ -1862,7 +2489,11 @@
               <i class="fa-solid fa-user-gear text-[9px]"></i> ${r.dispMgr}
             </span>
           </td>
-          <td class="py-2.5 px-3 whitespace-nowrap">${r.operatingCount} 間</td>
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            <button type="button" onclick="toggleSubStoresRow('${detailRowId}', '${iconId}')" class="hover:text-indigo-600 hover:underline font-medium cursor-pointer" title="點擊檢視涵蓋門市清單">
+              ${r.operatingCount} 間
+            </button>
+          </td>
           <td class="py-2.5 px-3 font-bold text-amber-600 whitespace-nowrap">${r.pmTarget}</td>
           <td class="py-2.5 px-3 font-bold text-indigo-600 whitespace-nowrap">${r.storeTarget}</td>
           <td class="py-2.5 px-3 ${r.bias > 0 ? 'text-amber-600' : r.bias < 0 ? 'text-rose-600' : 'text-slate-500'} font-semibold whitespace-nowrap">
@@ -1875,7 +2506,965 @@
           <td class="py-2.5 px-3 whitespace-nowrap">${r.statusTag}</td>
         `;
         tbody.appendChild(tr);
+
+        // Expandable Sub-stores Detail Row
+        const detailTr = document.createElement('tr');
+        detailTr.id = detailRowId;
+        detailTr.className = `${r.autoExpand ? '' : 'hidden'} bg-indigo-50/40 border-b border-indigo-100`;
+
+        const memberBadgesHtml = r.members.map(m => {
+          const isHit = searchKeyword && m.storeName.toLowerCase().includes(searchKeyword);
+          const geoTag = m.district ? `<span class="text-[10px] text-slate-400 mr-1">[${m.district}]</span>` : '';
+          if (m.isMain) {
+            return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold ${isHit ? 'bg-amber-100 text-amber-900 border-amber-400 ring-1 ring-amber-400' : 'bg-indigo-600 text-white border-indigo-600'} border shadow-2xs">
+              <span class="px-1 py-0.2 rounded bg-white/20 text-[9px]">主門市</span> ${m.storeName}
+            </span>`;
+          }
+          return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium ${isHit ? 'bg-amber-100 text-amber-950 border-amber-400 font-bold ring-1 ring-amber-400' : 'bg-white text-slate-700 border-slate-200'} border shadow-2xs">
+            <span class="px-1 py-0.2 rounded bg-slate-100 text-slate-500 text-[9px] font-bold">子門市</span> ${geoTag}${m.storeName}
+          </span>`;
+        }).join('');
+
+        detailTr.innerHTML = `
+          <td colspan="13" class="py-3 px-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5 mr-1">
+                <i class="fa-solid fa-sitemap text-indigo-500"></i> 群組涵蓋門市明細（共 ${r.operatingCount} 間）：
+              </span>
+              ${memberBadgesHtml}
+            </div>
+          </td>
+        `;
+        tbody.appendChild(detailTr);
       });
+    }
+
+    window.toggleSubStoresRow = function(rowId, iconId) {
+      const rowEl = document.getElementById(rowId);
+      const iconEl = document.getElementById(iconId);
+      if (!rowEl) return;
+      const isHidden = rowEl.classList.toggle('hidden');
+      if (iconEl) {
+        iconEl.className = isHidden
+          ? 'fa-solid fa-chevron-right text-[10px] text-indigo-400 group-hover:text-indigo-700 w-3'
+          : 'fa-solid fa-chevron-down text-[10px] text-indigo-600 w-3';
+      }
+    };
+
+
+    // --- 10. Cross-District Linkage Helper (依「智取店招募總覽」G欄主要門市分組，比對同組B欄不同區域；同縣市僅顯示行政區，跨縣市才顯示縣市+行政區) ---
+    function getCrossDistrictsFor(targetCity, targetDistrict) {
+      if (!targetCity || targetCity === 'ALL' || !targetDistrict || targetDistrict === 'ALL') {
+        return [];
+      }
+      const normTargetCity = normalizeText(targetCity);
+      const normTargetDist = normalizeText(targetDistrict);
+
+      // 依 G欄 (mainStore) 將所有門市分組，記錄主門市所在縣市與同組涵蓋的所有 (縣市, 行政區)
+      const groupByMainStore = new Map();
+      DB.groups.forEach(g => {
+        const mKey = cleanStoreKey(g.mainStore);
+        if (!mKey) return;
+        if (!groupByMainStore.has(mKey)) {
+          groupByMainStore.set(mKey, {
+            mainStoreName: g.mainStore,
+            mainCity: '',
+            geos: new Map()
+          });
+        }
+        const entry = groupByMainStore.get(mKey);
+        const c = normalizeText(g.city);
+        const d = normalizeText(g.district);
+        if (g.isMainStoreRow && c) {
+          entry.mainCity = c;
+        }
+        if (c && d) {
+          entry.geos.set(`${c}|${d}`, { city: c, district: d });
+        }
+      });
+
+      // 找出包含 (targetCity, targetDistrict) 的所有群組，並收集同組中的其他行政區
+      const crossMap = new Map();
+      groupByMainStore.forEach(entry => {
+        const targetKey = `${normTargetCity}|${normTargetDist}`;
+        if (!entry.geos.has(targetKey)) return;
+
+        const baseCity = entry.mainCity || normTargetCity;
+
+        // 此群組確實包含目標區域，檢查同組中是否有其他不同區域
+        entry.geos.forEach((geoObj, gKey) => {
+          if (gKey !== targetKey) {
+            // 僅顯示「行政區」；除非與目前檢視區域或主門市有跨縣市，才將縣市一併顯示
+            const isSameCity = isGeoMatch(geoObj.city, normTargetCity) && isGeoMatch(geoObj.city, baseCity);
+            const label = isSameCity
+              ? geoObj.district
+              : `${geoObj.city}${geoObj.district}`;
+            if (!crossMap.has(gKey)) {
+              crossMap.set(gKey, {
+                city: geoObj.city,
+                district: geoObj.district,
+                label: label,
+                viaStores: [entry.mainStoreName.replace(' - 智取店', '')]
+              });
+            } else {
+              const existing = crossMap.get(gKey);
+              const shortName = entry.mainStoreName.replace(' - 智取店', '');
+              if (!existing.viaStores.includes(shortName)) {
+                existing.viaStores.push(shortName);
+              }
+            }
+          }
+        });
+      });
+
+      return Array.from(crossMap.values());
+    }
+
+    function renderCrossDistrictBanner(city, district) {
+      const banner = document.getElementById('crossDistrictBanner');
+      const textEl = document.getElementById('crossDistrictText');
+      const linksEl = document.getElementById('crossDistrictLinks');
+      if (!banner || !textEl || !linksEl) return;
+
+      if (city === 'ALL' || district === 'ALL') {
+        banner.classList.add('hidden');
+        return;
+      }
+
+      if (DB.groups.length === 0) {
+        banner.classList.remove('hidden');
+        textEl.innerHTML = '⚠️ 尚未讀取到「智取店招募總覽」分頁資料（若剛修改 Apps Script，請務必點擊<strong>「部署 ➔ 管理部署作業 ➔ 編輯 ➔ 新版本」</strong>才會生效，或點右上角「手動匯入」上傳該分頁 CSV）。';
+        linksEl.innerHTML = '';
+        return;
+      }
+
+      const crossList = getCrossDistrictsFor(city, district);
+      if (crossList.length === 0) {
+        banner.classList.add('hidden');
+        return;
+      }
+
+      banner.classList.remove('hidden');
+      textEl.textContent = `【${city}${district}】跨區共管：`;
+      linksEl.innerHTML = '';
+
+      crossList.forEach(item => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'px-2.5 py-0.5 rounded-full bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 font-bold text-[11px] transition shadow-xs flex items-center gap-1 cursor-pointer';
+        // 統一僅顯示行政區（若有跨縣市則自動含縣市），群組明細放在滑鼠懸停提示中
+        btn.innerHTML = `<i class="fa-solid fa-location-dot text-amber-500 text-[10px]"></i> ${item.label}`;
+        const viaHint = item.viaStores && item.viaStores.length > 0 ? `（共管群組：${item.viaStores.join('、')}）` : '';
+        btn.title = `點擊切換至 ${item.city}${item.district}${viaHint}`;
+        btn.addEventListener('click', () => {
+          document.getElementById('filterCity').value = item.city;
+          updateFilterDropdowns('CITY');
+          document.getElementById('filterDistrict').value = item.district;
+          updateFilterDropdowns('DISTRICT');
+          refreshDashboard();
+        });
+        linksEl.appendChild(btn);
+      });
+    }
+
+    // --- 11. 次期津貼調整決策與全區缺工評估引擎 (可自訂權重比重 0~5 與任意比較基準期) ---
+    let latestAllowanceAnalysisRows = [];
+    let latestDrilldownRows = [];
+    let activeMainTab = 'overview'; // 'overview' | 'allowance'
+
+    const ALLOWANCE_CONFIG = {
+      wApp: 3.5,
+      wSup: 3.5,
+      wPm: 3.0,
+      prevMonth: null,
+      currMonth: null
+    };
+
+    window.switchMainTab = function(tabName, skipLoadingOverlay = false) {
+      const targetTitle = tabName === 'allowance' ? '正在切換至「次期津貼規劃」...' : '正在切換至「人力水位總覽」...';
+      const targetDetail = tabName === 'allowance' ? '正在載入全區津貼與缺工壓力評估表...' : '正在更新全區 KPI 指標、趨勢圖與門市明細...';
+      if (!skipLoadingOverlay) {
+        showLoading(targetTitle, targetDetail);
+      }
+
+      setTimeout(() => {
+        try {
+          activeMainTab = tabName;
+          const overviewEl = document.getElementById('overviewTabSection');
+          const allowanceEl = document.getElementById('allowanceTabSection');
+          const navOverview = document.getElementById('navTabOverview');
+          const navAllowance = document.getElementById('navTabAllowance');
+
+          const topMonthWrap = document.getElementById('topFilterMonthWrapper');
+          const globalSlicersEl = document.getElementById('globalSlicersSection');
+          const crossBannerEl = document.getElementById('crossDistrictBanner');
+          if (tabName === 'allowance') {
+            overviewEl?.classList.add('hidden');
+            allowanceEl?.classList.remove('hidden');
+            topMonthWrap?.classList.add('hidden');
+            globalSlicersEl?.classList.add('hidden');
+            crossBannerEl?.classList.add('hidden');
+            // 切換至「次期津貼規劃」時，確保以全區（不受總覽頁殘留篩選影響）重算完整津貼規劃表
+            const fallbackMonth = document.getElementById('filterMonth').value;
+            computeAllDistrictAllowanceAnalysis(fallbackMonth, 'ALL', 'ALL', 'ALL', 'ALL', 'ALL');
+
+            if (navAllowance) {
+              navAllowance.className = 'flex-1 md:flex-none w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition bg-indigo-50 text-indigo-800 border border-indigo-200 shadow-xs';
+              navAllowance.querySelector('span').className = 'w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs shrink-0 mx-auto md:mx-0';
+              navAllowance.querySelector('div div:last-child').className = 'text-[10px] font-normal text-indigo-600 hidden md:block whitespace-nowrap';
+            }
+            if (navOverview) {
+              navOverview.className = 'flex-1 md:flex-none w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition text-slate-600 hover:bg-slate-100 border border-transparent';
+              navOverview.querySelector('span').className = 'w-7 h-7 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center text-xs shrink-0 mx-auto md:mx-0';
+              navOverview.querySelector('div div:last-child').className = 'text-[10px] font-normal text-slate-400 hidden md:block whitespace-nowrap';
+            }
+          } else {
+            allowanceEl?.classList.add('hidden');
+            overviewEl?.classList.remove('hidden');
+            topMonthWrap?.classList.remove('hidden');
+            globalSlicersEl?.classList.remove('hidden');
+            renderCrossDistrictBanner(
+              document.getElementById('filterCity').value,
+              document.getElementById('filterDistrict').value
+            );
+
+            if (navOverview) {
+              navOverview.className = 'flex-1 md:flex-none w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition bg-teal-50 text-teal-800 border border-teal-200 shadow-xs';
+              navOverview.querySelector('span').className = 'w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs shrink-0 mx-auto md:mx-0';
+              navOverview.querySelector('div div:last-child').className = 'text-[10px] font-normal text-teal-600 hidden md:block whitespace-nowrap';
+            }
+            if (navAllowance) {
+              navAllowance.className = 'flex-1 md:flex-none w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition text-slate-600 hover:bg-slate-100 border border-transparent';
+              navAllowance.querySelector('span').className = 'w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs shrink-0 mx-auto md:mx-0';
+              navAllowance.querySelector('div div:last-child').className = 'text-[10px] font-normal text-slate-400 hidden md:block whitespace-nowrap';
+            }
+          }
+
+          // 切換分頁時同步更新下方明細表（津貼規劃分頁採用評估基準期，人力總覽分頁採用頂部篩選月份）
+          const city = document.getElementById('filterCity').value;
+          const district = document.getElementById('filterDistrict').value;
+          const supervisor = document.getElementById('filterSupervisor').value;
+          const manager = document.getElementById('filterManager').value;
+          const shift = document.getElementById('filterShift').value;
+          const targetMonth = (tabName === 'allowance' && ALLOWANCE_CONFIG.currMonth)
+            ? ALLOWANCE_CONFIG.currMonth
+            : document.getElementById('filterMonth').value;
+          renderDrilldownTable(city, district, targetMonth, shift, supervisor, manager);
+          showActionToast(
+            tabName === 'allowance' ? '已切換至「次期津貼規劃」' : '已切換至「人力水位總覽」',
+            tabName === 'allowance' ? '可自訂權重比重與比較基準期後按「確認並計算」' : '顯示全區 KPI 指標與趨勢圖表',
+            'info'
+          );
+        } finally {
+          if (!skipLoadingOverlay) {
+            hideLoading();
+          }
+        }
+      }, skipLoadingOverlay ? 0 : 120);
+    };
+
+    function updateWeightRatioPreview() {
+      const wApp = parseFloat(document.getElementById('weightAppShortage')?.value ?? 3.5);
+      const wSup = parseFloat(document.getElementById('weightSupDeficit')?.value ?? 3.5);
+      const wPm = parseFloat(document.getElementById('weightPmDeficit')?.value ?? 3.0);
+      const sum = wApp + wSup + wPm;
+      const previewEl = document.getElementById('weightRatioPreview');
+      if (!previewEl) return;
+      if (sum <= 0) {
+        previewEl.textContent = '換算佔比：0% / 0% / 0% (請至少設定一項大於 0)';
+        previewEl.className = 'text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-300';
+      } else {
+        const pApp = ((wApp / sum) * 100).toFixed(1);
+        const pSup = ((wSup / sum) * 100).toFixed(1);
+        const pPm = ((wPm / sum) * 100).toFixed(1);
+        previewEl.textContent = `換算佔比：${pApp}% / ${pSup}% / ${pPm}%`;
+        previewEl.className = 'text-[11px] font-semibold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200';
+      }
+    }
+
+    function applyAllowanceParameters() {
+      const wApp = parseFloat(document.getElementById('weightAppShortage')?.value ?? 3.5);
+      const wSup = parseFloat(document.getElementById('weightSupDeficit')?.value ?? 3.5);
+      const wPm = parseFloat(document.getElementById('weightPmDeficit')?.value ?? 3.0);
+
+      if (wApp + wSup + wPm <= 0) {
+        alert('三項權重比重總和不能為 0，請至少選擇一項大於 0 的比重！');
+        return;
+      }
+
+      const btn = document.getElementById('applyAllowanceParamsBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-80', 'cursor-wait');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 計算中...';
+      }
+
+      showLoading('正在重新計算津貼建議...', `套用權重 ${wApp.toFixed(1)} : ${wSup.toFixed(1)} : ${wPm.toFixed(1)} 並比對全區缺工指標`);
+
+      setTimeout(() => {
+        try {
+          const prevSel = document.getElementById('compBasePrevSelect')?.value;
+          const currSel = document.getElementById('compBaseCurrSelect')?.value;
+
+          ALLOWANCE_CONFIG.wApp = wApp;
+          ALLOWANCE_CONFIG.wSup = wSup;
+          ALLOWANCE_CONFIG.wPm = wPm;
+          if (prevSel !== undefined) ALLOWANCE_CONFIG.prevMonth = prevSel || null;
+          if (currSel) ALLOWANCE_CONFIG.currMonth = currSel;
+
+          const city = activeMainTab === 'allowance' ? 'ALL' : document.getElementById('filterCity').value;
+          const district = activeMainTab === 'allowance' ? 'ALL' : document.getElementById('filterDistrict').value;
+          const supervisor = activeMainTab === 'allowance' ? 'ALL' : document.getElementById('filterSupervisor').value;
+          const manager = activeMainTab === 'allowance' ? 'ALL' : document.getElementById('filterManager').value;
+          const shift = activeMainTab === 'allowance' ? 'ALL' : document.getElementById('filterShift').value;
+          const vendor = activeMainTab === 'allowance' ? 'ALL' : document.getElementById('filterVendor').value;
+          const fallbackMonth = document.getElementById('filterMonth').value;
+
+          computeAllDistrictAllowanceAnalysis(fallbackMonth, city, supervisor, manager, shift, vendor);
+          renderDrilldownTable(city, district, ALLOWANCE_CONFIG.currMonth || fallbackMonth, shift, supervisor, manager);
+
+          const prevTag = ALLOWANCE_CONFIG.prevMonth ? getRelativeMonthCode(ALLOWANCE_CONFIG.prevMonth) : '無前期';
+          const currTag = getRelativeMonthCode(ALLOWANCE_CONFIG.currMonth || fallbackMonth);
+          showActionToast(
+            '✓ 津貼建議計算完成',
+            `權重 ${wApp.toFixed(1)}:${wSup.toFixed(1)}:${wPm.toFixed(1)} ｜ 基準 ${prevTag} ➔ ${currTag}（共 ${latestAllowanceAnalysisRows.length} 區）`,
+            'success'
+          );
+          flashSectionUpdate('allowanceDecisionCard');
+        } finally {
+          hideLoading();
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-80', 'cursor-wait');
+            btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> 已套用計算';
+            setTimeout(() => {
+              btn.innerHTML = '<i class="fa-solid fa-check"></i> 確認並計算';
+            }, 1400);
+          }
+        }
+      }, 280);
+    }
+
+    function computeAllDistrictAllowanceAnalysis(fallbackMonth, filterCity, filterSupervisor, filterManager, shift, vendor) {
+      const selectedMonth = ALLOWANCE_CONFIG.currMonth || fallbackMonth;
+      const prevMonth = ALLOWANCE_CONFIG.prevMonth !== undefined
+        ? ALLOWANCE_CONFIG.prevMonth
+        : (DB.periods.indexOf(selectedMonth) > 0 ? DB.periods[DB.periods.indexOf(selectedMonth) - 1] : null);
+
+      const wApp = ALLOWANCE_CONFIG.wApp;
+      const wSup = ALLOWANCE_CONFIG.wSup;
+      const wPm = ALLOWANCE_CONFIG.wPm;
+      const wSum = Math.max(0.0001, wApp + wSup + wPm);
+      const rApp = wApp / wSum;
+      const rSup = wSup / wSum;
+      const rPm = wPm / wSum;
+
+      // 更新顯示中的權重標示與表頭百分比
+      const appliedWeightsEl = document.getElementById('appliedWeightsLabel');
+      if (appliedWeightsEl) {
+        appliedWeightsEl.textContent = `收件 ${wApp.toFixed(1)} (${(rApp * 100).toFixed(0)}%) : 區主管 ${wSup.toFixed(1)} (${(rSup * 100).toFixed(0)}%) : PM ${wPm.toFixed(1)} (${(rPm * 100).toFixed(0)}%)`;
+      }
+      const thWApp = document.getElementById('thWeightAppHeader');
+      const thWSup = document.getElementById('thWeightSupHeader');
+      const thWPm = document.getElementById('thWeightPmHeader');
+      if (thWApp) thWApp.textContent = `收件缺口比 (${(rApp * 100).toFixed(0)}%)`;
+      if (thWSup) thWSup.textContent = `區主管缺額比 (${(rSup * 100).toFixed(0)}%)`;
+      if (thWPm) thWPm.textContent = `PM真實缺額比 (${(rPm * 100).toFixed(0)}%)`;
+
+      const now = new Date();
+      const currentCalendarYM = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const completedPeriods = DB.periods.filter(p => p < currentCalendarYM);
+      const latestCompletedMonth = completedPeriods.length > 0 ? completedPeriods[completedPeriods.length - 1] : null;
+
+      const warnEl = document.getElementById('incompleteMonthWarning');
+      if (warnEl) {
+        if (selectedMonth >= currentCalendarYM && latestCompletedMonth) {
+          warnEl.classList.remove('hidden');
+        } else {
+          warnEl.classList.add('hidden');
+        }
+      }
+
+      const prevCode = prevMonth ? getRelativeMonthCode(prevMonth) : '';
+      const currCode = getRelativeMonthCode(selectedMonth);
+      const prevLabelEl = document.getElementById('compPrevMonthLabel');
+      const currLabelEl = document.getElementById('compCurrMonthLabel');
+      if (prevLabelEl) prevLabelEl.textContent = prevMonth ? formatMonthWithCode(prevMonth) : '無前月';
+      if (currLabelEl) currLabelEl.textContent = selectedMonth === currentCalendarYM
+        ? formatMonthWithCode(selectedMonth, '進行中')
+        : formatMonthWithCode(selectedMonth, '完整月');
+
+      const thAppCompEl = document.getElementById('thAppCompareHeader');
+      if (thAppCompEl) {
+        thAppCompEl.textContent = prevMonth ? `單店收件 (${prevCode} ➔ ${currCode})` : `單店收件 (${currCode})`;
+      }
+
+      // 收集所有不重複的 (縣市, 行政區)（先全區計算以便跨縣市綑綁平均準確，最後再依 filterCity 過濾顯示）
+      const geoSet = new Map();
+      const registerGeo = (c, d) => {
+        const nc = normalizeText(c);
+        const nd = normalizeText(d);
+        if (!nc || !nd) return;
+        const k = `${nc}|${nd}`;
+        if (!geoSet.has(k)) geoSet.set(k, { city: nc, district: nd });
+      };
+
+      DB.pmDemand.forEach(p => {
+        const org = getStoreOrg(p.mainStore);
+        const sup = p.supervisor && p.supervisor !== '-' ? p.supervisor : org.supervisor;
+        const mgr = p.manager && p.manager !== '-' ? p.manager : org.manager;
+        if (!isPersonMatch(sup, filterSupervisor)) return;
+        if (!isPersonMatch(mgr, filterManager)) return;
+        registerGeo(p.city, p.district);
+      });
+      DB.vacancy.forEach(v => {
+        const org = getStoreOrg(v.storeName);
+        const sup = v.supervisor && v.supervisor !== '-' ? v.supervisor : org.supervisor;
+        const mgr = v.manager && v.manager !== '-' ? v.manager : org.manager;
+        if (!isPersonMatch(sup, filterSupervisor)) return;
+        if (!isPersonMatch(mgr, filterManager)) return;
+        registerGeo(v.city, v.district);
+      });
+      DB.groups.forEach(g => {
+        const org = getStoreOrg(g.mainStore);
+        const sup = g.supervisor && g.supervisor !== '-' ? g.supervisor : org.supervisor;
+        const mgr = g.manager && g.manager !== '-' ? g.manager : org.manager;
+        if (!isPersonMatch(sup, filterSupervisor)) return;
+        if (!isPersonMatch(mgr, filterManager)) return;
+        registerGeo(g.city, g.district);
+      });
+      DB.stores.forEach(s => {
+        if (s.status !== '營業中') return;
+        const org = getStoreOrg(s.storeName);
+        if (!isPersonMatch(org.supervisor, filterSupervisor)) return;
+        if (!isPersonMatch(org.manager, filterManager)) return;
+        registerGeo(s.city, s.district);
+      });
+
+      const results = [];
+
+      geoSet.forEach(({ city, district }) => {
+        // 1. 營業店數
+        const activeStores = DB.stores.filter(s => {
+          if (s.status !== '營業中') return false;
+          if (!isGeoMatch(s.city, city) || !isGeoMatch(s.district, district)) return false;
+          const org = getStoreOrg(s.storeName);
+          if (!isPersonMatch(org.supervisor, filterSupervisor)) return false;
+          if (!isPersonMatch(org.manager, filterManager)) return false;
+          return true;
+        });
+        const storeCount = Math.max(1, activeStores.length);
+
+        // 2. 取得當月與上月的月末存量快照
+        const vacCurr = getMonthEndVacancyRows(selectedMonth, city, district, filterSupervisor, filterManager);
+        const vacPrev = prevMonth ? getMonthEndVacancyRows(prevMonth, city, district, filterSupervisor, filterManager) : [];
+
+        // 計算區主管開立水位 & 已招募數 (當月 vs 上月)
+        const calcVacMetrics = (vacRows) => {
+          let target = 0, hired = 0;
+          vacRows.forEach(v => {
+            if (shift === '早班') {
+              target += v.morningTarget;
+              hired += v.morningHired;
+            } else if (shift === '晚班') {
+              target += v.eveningTarget;
+              hired += v.eveningHired;
+            } else {
+              target += (v.storeTargetTotal || (v.morningTarget + v.eveningTarget));
+              hired += (v.hiredTotal || (v.morningHired + v.eveningHired));
+            }
+          });
+          const deficit = Math.max(0, target - hired);
+          const ratio = target > 0 ? (deficit / target) * 100 : 0;
+          return { target, hired, deficit, ratio };
+        };
+
+        const supCurr = calcVacMetrics(vacCurr);
+        const supPrev = calcVacMetrics(vacPrev);
+
+        // 3. 計算 PM 需要水位 & PM 真實缺額 (當月 vs 上月)
+        const pmRows = DB.pmDemand.filter(p => {
+          if (!isGeoMatch(p.city, city) || !isGeoMatch(p.district, district)) return false;
+          const org = getStoreOrg(p.mainStore);
+          const actualSup = p.supervisor && p.supervisor !== '-' ? p.supervisor : org.supervisor;
+          const actualMgr = p.manager && p.manager !== '-' ? p.manager : org.manager;
+          if (!isPersonMatch(actualSup, filterSupervisor)) return false;
+          if (!isPersonMatch(actualMgr, filterManager)) return false;
+          return true;
+        });
+
+        let pmTargetTotal = 0;
+        let pmDeficitCurr = 0;
+        let pmDeficitPrev = 0;
+
+        pmRows.forEach(p => {
+          const pTarget = (shift === '早班') ? p.morning : (shift === '晚班') ? p.evening : p.total;
+          pmTargetTotal += pTarget;
+
+          const mKey = cleanStoreKey(p.mainStore);
+          const mVacCurr = vacCurr.find(v => cleanStoreKey(v.storeName) === mKey);
+          const hiredC = mVacCurr ? ((shift === '早班') ? mVacCurr.morningHired : (shift === '晚班') ? mVacCurr.eveningHired : mVacCurr.hiredTotal) : 0;
+          pmDeficitCurr += Math.max(0, pTarget - hiredC);
+
+          if (prevMonth) {
+            const mVacPrev = vacPrev.find(v => cleanStoreKey(v.storeName) === mKey);
+            const hiredP = mVacPrev ? ((shift === '早班') ? mVacPrev.morningHired : (shift === '晚班') ? mVacPrev.eveningHired : mVacPrev.hiredTotal) : 0;
+            pmDeficitPrev += Math.max(0, pTarget - hiredP);
+          }
+        });
+
+        const pmRatioCurr = pmTargetTotal > 0 ? (pmDeficitCurr / pmTargetTotal) * 100 : 0;
+        const pmRatioPrev = pmTargetTotal > 0 ? (pmDeficitPrev / pmTargetTotal) * 100 : 0;
+
+        // 4. 計算收件量與收件缺口比 (當月 vs 上月)
+        const countApps = (mStr) => {
+          if (!mStr) return 0;
+          return DB.resumes.filter(r => {
+            if (r.month !== mStr) return false;
+            if (!isGeoMatch(r.city, city) || !isGeoMatch(r.district, district)) return false;
+            const org = getStoreOrg(r.mainStore);
+            if (!isPersonMatch(org.supervisor, filterSupervisor)) return false;
+            if (!isPersonMatch(org.manager, filterManager)) return false;
+            if (shift !== 'ALL' && !r.shift.includes(shift)) return false;
+            if (vendor !== 'ALL' && r.vendor !== vendor) return false;
+            return true;
+          }).length;
+        };
+
+        const appsCurr = countApps(selectedMonth);
+        const appsPrev = countApps(prevMonth);
+        const appPerStoreCurr = appsCurr / storeCount;
+        const appPerStorePrev = appsPrev / storeCount;
+
+        // 收件缺口比（0%~100%）：以「區主管與PM平均缺額 × 1.62 份履歷/人」作為實際轉換安全基準
+        const avgDeficit = (pmDeficitCurr + supCurr.deficit) / 2.0;
+        let appShortageRatio = 0;
+        if (avgDeficit > 0) {
+          const neededResumes = avgDeficit * 1.62;
+          const coverage = Math.min(1, appsCurr / neededResumes);
+          appShortageRatio = (1 - coverage) * 100;
+        } else {
+          appShortageRatio = 0;
+        }
+
+        // 5. 綜合壓力指數計算：依自訂比重動態加權 (0 ~ 100 分)
+        const weightedScore = (rApp * appShortageRatio) + (rSup * supCurr.ratio) + (rPm * pmRatioCurr);
+
+        // 6. 記錄本區指標與綑綁清單
+        const currAllowance = calculateAvgAllowance(city, district, selectedMonth);
+        const appDelta = appPerStoreCurr - appPerStorePrev;
+        const pmDelta = pmRatioCurr - pmRatioPrev;
+        const supDelta = supCurr.ratio - supPrev.ratio;
+
+        // 判斷該行政區是否有「主門市」（以智取店招募總覽 F欄「主要門市」標記與 H欄所屬主要門市為準，不因週報有子門市列而誤判）
+        const distGroupRows = DB.groups.filter(g => isGeoMatch(g.city, city) && isGeoMatch(g.district, district));
+        const hasMainInGroups = distGroupRows.some(g => g.isMainStoreRow);
+        const hasMainStore = (DB.groups.length > 0)
+          ? (distGroupRows.length > 0 ? hasMainInGroups : (pmRows.length > 0))
+          : (pmRows.length > 0);
+
+        // 若未有主門市，找出其門市掛在哪個主門市 / 行政區底下
+        let attachedToDesc = '';
+        if (!hasMainStore && distGroupRows.length > 0) {
+          const parentNames = new Set();
+          distGroupRows.forEach(g => {
+            const mainRow = DB.groups.find(m => m.isMainStoreRow && cleanStoreKey(m.mainStore) === cleanStoreKey(g.mainStore));
+            if (mainRow && mainRow.district) {
+              const distLabel = isGeoMatch(mainRow.city, city) ? mainRow.district : `${mainRow.city}${mainRow.district}`;
+              parentNames.add(`${distLabel}(${g.mainStore.replace(' - 智取店', '')})`);
+            } else if (g.mainStore) {
+              parentNames.add(g.mainStore.replace(' - 智取店', ''));
+            }
+          });
+          attachedToDesc = Array.from(parentNames).join('、');
+        }
+
+        const crossItems = getCrossDistrictsFor(city, district);
+        const crossDistricts = crossItems.map(x => x.label);
+
+        results.push({
+          city,
+          district,
+          hasMainStore,
+          attachedToDesc,
+          crossItems,
+          crossDistrictStr: crossDistricts.length > 0 ? crossDistricts.join('、') : '-',
+          storeCount,
+          currAllowance,
+          appsCurr,
+          appsPrev,
+          appPerStoreCurr,
+          appPerStorePrev,
+          appDelta,
+          appShortageRatio,
+          supDeficitCurr: supCurr.deficit,
+          supRatioCurr: supCurr.ratio,
+          supRatioPrev: supPrev.ratio,
+          supDelta,
+          pmDeficitCurr,
+          pmRatioCurr,
+          pmRatioPrev,
+          pmDelta,
+          weightedScore
+        });
+      });
+
+      // 7. 第二階段：計算「綜合壓力分數 (含綑綁區)」＝ 自己區域 ＋ 所有綑綁區域（僅計入有主門市之有效區域）的綜合壓力分數平均，並依此判定次期津貼調整方向
+      const rowLookup = new Map();
+      results.forEach(r => {
+        rowLookup.set(`${normalizeText(r.city)}|${normalizeText(r.district)}`, r);
+      });
+
+      results.forEach(r => {
+        if (!r.hasMainStore) {
+          r.bundleCount = 0;
+          r.hasBundle = false;
+          r.bundledScore = 0;
+          r.actionCode = 'NO_MAIN';
+          r.actionLabel = '⛔ 不建議放津貼';
+          r.actionReason = r.attachedToDesc ? `未有主門市（掛於 ${r.attachedToDesc}）` : '該區未設主門市，不單獨配置津貼';
+          r.badgeClass = 'bg-slate-100 text-slate-600 border-slate-300';
+          return;
+        }
+
+        const bundleGroup = [r];
+        (r.crossItems || []).forEach(ci => {
+          const peer = rowLookup.get(`${normalizeText(ci.city)}|${normalizeText(ci.district)}`);
+          if (peer && peer.hasMainStore && !bundleGroup.includes(peer)) {
+            bundleGroup.push(peer);
+          }
+        });
+
+        r.bundleCount = bundleGroup.length;
+        r.hasBundle = bundleGroup.length > 1;
+        r.bundledScore = bundleGroup.reduce((acc, item) => acc + item.weightedScore, 0) / bundleGroup.length;
+
+        const avgPmDelta = bundleGroup.reduce((acc, item) => acc + item.pmDelta, 0) / bundleGroup.length;
+        const avgSupDelta = bundleGroup.reduce((acc, item) => acc + item.supDelta, 0) / bundleGroup.length;
+        const avgAppDelta = bundleGroup.reduce((acc, item) => acc + item.appDelta, 0) / bundleGroup.length;
+        const avgPmRatio = bundleGroup.reduce((acc, item) => acc + item.pmRatioCurr, 0) / bundleGroup.length;
+        const avgSupRatio = bundleGroup.reduce((acc, item) => acc + item.supRatioCurr, 0) / bundleGroup.length;
+
+        const evalScore = r.bundledScore;
+        const isWorsening = (avgPmDelta > 3 || avgSupDelta > 3 || avgAppDelta < -0.3);
+
+        let actionCode = 'KEEP';
+        let actionLabel = '🟢 維持現行津貼';
+        let actionReason = r.hasBundle ? `含綑綁共${r.bundleCount}區平均供需穩健` : '供需與收件動能穩健';
+        let badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+
+        if (evalScore >= 60 || (evalScore >= 30 && isWorsening)) {
+          actionCode = 'UP';
+          if (evalScore >= 85) {
+            actionLabel = '🔺 建議大幅調升 (+$10~$15)';
+            actionReason = r.hasBundle ? `含綑綁共${r.bundleCount}區極高度缺工 (≥85分)` : '極高度缺工且收件嚴重不足 (≥85分)';
+            badgeClass = 'bg-rose-100 text-rose-800 border-rose-300';
+          } else {
+            actionLabel = '🔺 建議適度調升 (+$5~$10)';
+            actionReason = evalScore >= 60
+              ? (r.hasBundle ? `含綑綁共${r.bundleCount}區平均壓力達標 (60~84.9分)` : '高度缺工壓力達標 (60~84.9分)')
+              : (r.hasBundle ? `含綑綁共${r.bundleCount}區中度壓力且趨勢惡化` : '中度壓力且缺額比上升 / 招募動能轉弱');
+            badgeClass = 'bg-amber-100 text-amber-800 border-amber-300';
+          }
+        } else if (evalScore < 15 && avgPmRatio < 8 && avgSupRatio < 8 && r.currAllowance > 15) {
+          actionCode = 'DOWN';
+          actionLabel = '🔽 建議調降津貼 (-$5~$10)';
+          actionReason = r.hasBundle ? `含綑綁共${r.bundleCount}區壓力極低 (<15分) 且滿編` : '壓力極低 (<15分) 且人力滿編、收件充裕';
+          badgeClass = 'bg-sky-100 text-sky-800 border-sky-300';
+        }
+
+        r.actionCode = actionCode;
+        r.actionLabel = actionLabel;
+        r.actionReason = actionReason;
+        r.badgeClass = badgeClass;
+      });
+
+      // 依 filterCity 過濾顯示列，有主門市者依「綜合壓力分數 (含綑綁區)」由高到低排序，未有主門市者排在後方
+      const visibleResults = results.filter(r => filterCity === 'ALL' || isGeoMatch(r.city, filterCity));
+      visibleResults.sort((a, b) => {
+        if (a.hasMainStore !== b.hasMainStore) return a.hasMainStore ? -1 : 1;
+        return b.bundledScore - a.bundledScore;
+      });
+      latestAllowanceAnalysisRows = visibleResults;
+      syncAllowanceGeoDropdowns('INIT');
+      renderAllowanceDecisionTable();
+    }
+
+    function syncAllowanceGeoDropdowns(changedLevel = 'INIT') {
+      const citySel = document.getElementById('allowanceCityFilter');
+      const distSel = document.getElementById('allowanceDistrictFilter');
+      if (!citySel || !distSel) return;
+
+      const prevCity = normalizeText(citySel.value || 'ALL');
+      let prevDist = normalizeText(distSel.value || 'ALL');
+
+      const allCities = Array.from(new Set(latestAllowanceAnalysisRows.map(r => normalizeText(r.city)).filter(Boolean))).sort();
+      citySel.innerHTML = '<option value="ALL">全部縣市</option>';
+      allCities.forEach(c => {
+        citySel.innerHTML += `<option value="${c}">${c}</option>`;
+      });
+      const activeCity = (prevCity !== 'ALL' && allCities.includes(prevCity)) ? prevCity : 'ALL';
+      citySel.value = activeCity;
+
+      if (changedLevel === 'CITY') {
+        prevDist = 'ALL';
+      }
+
+      const validDists = Array.from(new Set(
+        latestAllowanceAnalysisRows
+          .filter(r => activeCity === 'ALL' || isGeoMatch(r.city, activeCity))
+          .map(r => normalizeText(r.district))
+          .filter(Boolean)
+      )).sort();
+
+      distSel.innerHTML = '<option value="ALL">全部行政區</option>';
+      validDists.forEach(d => {
+        distSel.innerHTML += `<option value="${d}">${d}</option>`;
+      });
+      const activeDist = (prevDist !== 'ALL' && validDists.includes(prevDist)) ? prevDist : 'ALL';
+      distSel.value = activeDist;
+    }
+
+    function renderAllowanceDecisionTable() {
+      const tbody = document.getElementById('allowanceDecisionTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      const allowCity = document.getElementById('allowanceCityFilter')?.value || 'ALL';
+      const allowDistrict = document.getElementById('allowanceDistrictFilter')?.value || 'ALL';
+      const actionFilter = document.getElementById('recActionFilter')?.value || 'ALL';
+
+      // 先依本分頁獨立的縣市 / 行政區篩選，再統計四類卡片數量
+      const geoScopedRows = latestAllowanceAnalysisRows.filter(r => {
+        if (!isGeoMatch(r.city, allowCity)) return false;
+        if (!isGeoMatch(r.district, allowDistrict)) return false;
+        return true;
+      });
+
+      let countUp = 0, countKeep = 0, countDown = 0, countNoMain = 0;
+      geoScopedRows.forEach(r => {
+        if (r.actionCode === 'NO_MAIN') countNoMain++;
+        else if (r.actionCode === 'UP') countUp++;
+        else if (r.actionCode === 'DOWN') countDown++;
+        else countKeep++;
+      });
+
+      document.getElementById('recCountUp').textContent = `${countUp} 區`;
+      document.getElementById('recCountKeep').textContent = `${countKeep} 區`;
+      document.getElementById('recCountDown').textContent = `${countDown} 區`;
+      const noMainEl = document.getElementById('recCountNoMain');
+      if (noMainEl) noMainEl.textContent = `${countNoMain} 區`;
+
+      // 更新四張摘要卡片的選取高亮狀態
+      const cardUp = document.getElementById('cardRecUp');
+      const cardKeep = document.getElementById('cardRecKeep');
+      const cardDown = document.getElementById('cardRecDown');
+      const cardNoMain = document.getElementById('cardRecNoMain');
+      if (cardUp) cardUp.className = `p-3 rounded-xl bg-rose-50/70 hover:bg-rose-100/80 border flex items-center justify-between cursor-pointer transition select-none ${actionFilter === 'UP' ? 'border-rose-500 ring-2 ring-rose-400 shadow-md' : 'border-rose-200'}`;
+      if (cardKeep) cardKeep.className = `p-3 rounded-xl bg-emerald-50/70 hover:bg-emerald-100/80 border flex items-center justify-between cursor-pointer transition select-none ${actionFilter === 'KEEP' ? 'border-emerald-500 ring-2 ring-emerald-400 shadow-md' : 'border-emerald-200'}`;
+      if (cardDown) cardDown.className = `p-3 rounded-xl bg-sky-50/70 hover:bg-sky-100/80 border flex items-center justify-between cursor-pointer transition select-none ${actionFilter === 'DOWN' ? 'border-sky-500 ring-2 ring-sky-400 shadow-md' : 'border-sky-200'}`;
+      if (cardNoMain) cardNoMain.className = `p-3 rounded-xl bg-slate-100/80 hover:bg-slate-200/70 border flex items-center justify-between cursor-pointer transition select-none ${actionFilter === 'NO_MAIN' ? 'border-slate-600 ring-2 ring-slate-500 shadow-md' : 'border-slate-300'}`;
+
+      const filtered = geoScopedRows.filter(r => {
+        if (actionFilter === 'ALL') return true;
+        return r.actionCode === actionFilter;
+      });
+
+      const formatTrendBadge = (delta, invertGood = false) => {
+        if (Math.abs(delta) < 0.1) return '<span class="text-slate-400 text-[10px]">持平</span>';
+        const isUp = delta > 0;
+        // 若 invertGood 為 true (如收件數上升是好事)，上升顯示綠色；若是缺額比上升則是壞事，顯示紅色
+        const good = invertGood ? isUp : !isUp;
+        const colorClass = good ? 'text-emerald-600' : 'text-rose-600';
+        const arrow = isUp ? '↑' : '↓';
+        return `<span class="${colorClass} font-bold text-[10px] ml-1">${arrow}${Math.abs(delta).toFixed(1)}</span>`;
+      };
+
+      filtered.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = r.hasMainStore
+          ? 'hover:bg-slate-50 transition border-b border-slate-100'
+          : 'bg-slate-50/70 hover:bg-slate-100/70 transition border-b border-slate-100 text-slate-400';
+
+        const selfScoreColor = r.weightedScore >= 60 ? 'text-rose-600' : r.weightedScore >= 30 ? 'text-amber-600' : 'text-emerald-600';
+        const bundleScoreColor = r.bundledScore >= 60 ? 'text-rose-600' : r.bundledScore >= 30 ? 'text-amber-600' : 'text-emerald-600';
+
+        const mainStoreStatusBadge = r.hasMainStore
+          ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200 text-[11px] font-bold"><i class="fa-solid fa-circle-check text-[10px]"></i> 有主門市</span>`
+          : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold" title="${r.attachedToDesc ? '門市掛於：' + r.attachedToDesc : '該區無主門市'}"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> 未有主門市</span>`;
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-bold ${r.hasMainStore ? 'text-slate-800' : 'text-slate-600'} whitespace-nowrap">
+            <button type="button" class="hover:text-indigo-600 underline decoration-dotted text-left" onclick="jumpToDistrict('${r.city}', '${r.district}')">
+              ${r.city} ${r.district}
+            </button>
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap">${mainStoreStatusBadge}</td>
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            ${DB.groups.length === 0
+              ? '<span class="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">待更新GAS部署</span>'
+              : (r.crossDistrictStr !== '-'
+                ? `<span class="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-medium">${r.crossDistrictStr}</span>`
+                : '<span class="text-slate-300">-</span>')}
+          </td>
+          <td class="py-2.5 px-3 font-semibold ${r.hasMainStore ? 'text-indigo-600' : 'text-slate-500'} whitespace-nowrap">$${r.currAllowance.toFixed(0)} /hr</td>
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            ${r.hasMainStore
+              ? `<span class="text-slate-400">${r.appPerStorePrev.toFixed(1)}</span> ➔ <strong class="text-slate-800">${r.appPerStoreCurr.toFixed(1)} 份/店</strong> ${formatTrendBadge(r.appDelta, true)}`
+              : '<span class="text-slate-400 text-[11px]">併入主門市計算</span>'}
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap font-medium text-slate-700">${r.hasMainStore ? r.appShortageRatio.toFixed(1) + '%' : '-'}</td>
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            ${r.hasMainStore
+              ? `<strong class="text-slate-800">${r.supRatioCurr.toFixed(1)}%</strong> <span class="text-[10px] text-slate-400">(${r.supDeficitCurr}人)</span> ${formatTrendBadge(r.supDelta, false)}`
+              : '-'}
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            ${r.hasMainStore
+              ? `<strong class="text-slate-800">${r.pmRatioCurr.toFixed(1)}%</strong> <span class="text-[10px] text-slate-400">(${r.pmDeficitCurr}人)</span> ${formatTrendBadge(r.pmDelta, false)}`
+              : '-'}
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            ${r.hasMainStore
+              ? `<span class="text-sm font-bold ${selfScoreColor}">${r.weightedScore.toFixed(1)}</span> <span class="text-[10px] text-slate-400">分</span>`
+              : '<span class="text-slate-400">-</span>'}
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap ${r.hasMainStore ? 'bg-indigo-50/30' : ''}">
+            ${r.hasMainStore
+              ? `<div class="flex items-center gap-1.5">
+                  <span class="text-sm font-black ${bundleScoreColor}">${r.bundledScore.toFixed(1)}</span>
+                  <span class="text-[10px] text-slate-400">分</span>
+                  ${r.hasBundle
+                    ? `<span class="px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 text-[10px] font-semibold">共${r.bundleCount}區均</span>`
+                    : `<span class="text-[10px] text-slate-400">(無綑綁)</span>`}
+                </div>`
+              : '<span class="text-slate-400">-</span>'}
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            <div class="flex flex-col">
+              <span class="px-2 py-0.5 rounded border text-[11px] font-bold w-fit ${r.badgeClass}">${r.actionLabel}</span>
+              <span class="text-[10px] text-slate-400 mt-0.5">${r.actionReason}</span>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.jumpToDistrict = function(city, district) {
+      document.getElementById('filterCity').value = city;
+      updateFilterDropdowns('CITY');
+      document.getElementById('filterDistrict').value = district;
+      updateFilterDropdowns('DISTRICT');
+      if (activeMainTab !== 'overview') {
+        switchMainTab('overview', true);
+      }
+      refreshDashboard();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showActionToast(`已切換至「${city} ${district}」`, '顯示該行政區的人力水位總覽與門市明細', 'info');
+    };
+
+    // --- 12. CSV Export Engine (含 UTF-8 BOM 確保 Excel 開啟繁體中文不亂碼) ---
+    function downloadCSVFile(filename, headers, rows) {
+      const escapeCell = (val) => {
+        if (val === null || val === undefined) return '';
+        const str = String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const csvLines = [
+        headers.map(escapeCell).join(','),
+        ...rows.map(row => row.map(escapeCell).join(','))
+      ];
+      const bom = '\uFEFF';
+      const blob = new Blob([bom + csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportAllowanceDecisionCSV() {
+      const selectedMonth = ALLOWANCE_CONFIG.currMonth || document.getElementById('filterMonth').value || '2026/10';
+      const prevMonth = ALLOWANCE_CONFIG.prevMonth;
+      const currTag = formatMonthWithCode(selectedMonth);
+      const prevTag = prevMonth ? formatMonthWithCode(prevMonth) : '無前期';
+      const wSum = Math.max(0.0001, ALLOWANCE_CONFIG.wApp + ALLOWANCE_CONFIG.wSup + ALLOWANCE_CONFIG.wPm);
+      const pApp = ((ALLOWANCE_CONFIG.wApp / wSum) * 100).toFixed(0);
+      const pSup = ((ALLOWANCE_CONFIG.wSup / wSum) * 100).toFixed(0);
+      const pPm = ((ALLOWANCE_CONFIG.wPm / wSum) * 100).toFixed(0);
+      const weightRatioStr = `${ALLOWANCE_CONFIG.wApp.toFixed(1)}:${ALLOWANCE_CONFIG.wSup.toFixed(1)}:${ALLOWANCE_CONFIG.wPm.toFixed(1)}`;
+      const headers = [
+        '縣市', '行政區', '主門市狀態', '跨區共管行政區', '營業店數', `${currTag}平均津貼($/hr)`,
+        `${prevTag}單店收件(份/店)`, `${currTag}單店收件(份/店)`, '單店收件變化',
+        `收件缺口比(權重${pApp}%)`, `${prevTag}區主管缺額比(%)`, `${currTag}區主管缺額比(權重${pSup}%)`, '區主管缺額人數',
+        `${prevTag}PM缺額比(%)`, `${currTag}PM真實缺額比(權重${pPm}%)`, 'PM真實缺額人數',
+        `綜合缺工壓力分數_本區(${weightRatioStr})`, `綜合缺工壓力分數_含綑綁區(${weightRatioStr})`, '綑綁涵蓋區數', '次期津貼調整方向', '評估原因說明'
+      ];
+
+      const rows = latestAllowanceAnalysisRows.map(r => [
+        r.city,
+        r.district,
+        r.hasMainStore ? '有主門市' : '未有主門市',
+        r.crossDistrictStr,
+        r.storeCount,
+        r.currAllowance.toFixed(0),
+        r.hasMainStore ? r.appPerStorePrev.toFixed(1) : '-',
+        r.hasMainStore ? r.appPerStoreCurr.toFixed(1) : '-',
+        r.hasMainStore ? ((r.appDelta >= 0 ? '+' : '') + r.appDelta.toFixed(1)) : '-',
+        r.hasMainStore ? (r.appShortageRatio.toFixed(1) + '%') : '-',
+        r.hasMainStore ? (r.supRatioPrev.toFixed(1) + '%') : '-',
+        r.hasMainStore ? (r.supRatioCurr.toFixed(1) + '%') : '-',
+        r.hasMainStore ? r.supDeficitCurr : '-',
+        r.hasMainStore ? (r.pmRatioPrev.toFixed(1) + '%') : '-',
+        r.hasMainStore ? (r.pmRatioCurr.toFixed(1) + '%') : '-',
+        r.hasMainStore ? r.pmDeficitCurr : '-',
+        r.hasMainStore ? r.weightedScore.toFixed(1) : '-',
+        r.hasMainStore ? r.bundledScore.toFixed(1) : '-',
+        r.hasMainStore ? r.bundleCount : 0,
+        r.actionLabel.replace(/[🔺🟢🔽⛔]/g, '').trim(),
+        r.actionReason
+      ]);
+
+      downloadCSVFile(`次期津貼調整方向與全區缺工評估_${selectedMonth.replace('/', '')}.csv`, headers, rows);
+      showActionToast('✓ 全區津貼建議報表已匯出', `共匯出 ${rows.length} 個行政區評估資料 (.csv)`, 'success');
+    }
+
+    function exportStoreDrilldownCSV() {
+      const selectedMonth = document.getElementById('filterMonth').value || '2026-10';
+      const headers = [
+        '縣市', '行政區', '主要門市群組', '包含子門市清單', '區主管', '區經理',
+        '營運店數', 'PM需要水位', '現場開立水位', '水位落差(開立-PM)',
+        '已招募數', 'PM真實缺額', '當月履歷數', '平均單店投遞(份)', '健康狀態'
+      ];
+
+      const rows = latestDrilldownRows.map(r => [
+        r.city,
+        r.district,
+        r.mainStore,
+        r.subStoresStr || '-',
+        r.dispSup,
+        r.dispMgr,
+        r.operatingCount,
+        r.pmTarget,
+        r.storeTarget,
+        r.bias,
+        r.hired,
+        r.pmDeficit,
+        r.appCount,
+        r.appPerSubStore,
+        r.statusText
+      ]);
+
+      downloadCSVFile(`主要門市群組細部明細_${selectedMonth.replace('/', '')}.csv`, headers, rows);
+      showActionToast('✓ 門市群組細部明細已匯出', `共匯出 ${rows.length} 筆門市群組資料 (.csv)`, 'success');
     }
 
     // --- 9. Event Listeners ---
@@ -1889,12 +3478,143 @@
         fetchRemoteGoogleSheetsData();
       });
 
-      document.getElementById('toggleUploadBtn').addEventListener('click', () => {
-        const panel = document.getElementById('uploadSection');
-        panel.classList.toggle('hidden');
+      document.getElementById('exportAllowanceReportBtn')?.addEventListener('click', exportAllowanceDecisionCSV);
+      document.getElementById('exportAllowanceTableBtn')?.addEventListener('click', exportAllowanceDecisionCSV);
+      document.getElementById('exportStoreTableBtn')?.addEventListener('click', exportStoreDrilldownCSV);
+      // 權重下拉選單即時換算百分比預覽（按下「確認並計算」才套用重算）
+      ['weightAppShortage', 'weightSupDeficit', 'weightPmDeficit'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', updateWeightRatioPreview);
       });
 
-      document.getElementById('resetDemoBtn').addEventListener('click', () => {
+      // 按下「確認並計算」套用權重與比較基準
+      document.getElementById('applyAllowanceParamsBtn')?.addEventListener('click', () => {
+        applyAllowanceParameters();
+      });
+
+      window.toggleRecActionFilter = function(code) {
+        const sel = document.getElementById('recActionFilter');
+        if (!sel) return;
+        if (code === 'ALL' || sel.value === code) {
+          sel.value = 'ALL';
+        } else {
+          sel.value = code;
+        }
+        renderAllowanceDecisionTable();
+        const city = document.getElementById('filterCity').value;
+        const district = document.getElementById('filterDistrict').value;
+        const supervisor = document.getElementById('filterSupervisor').value;
+        const manager = document.getElementById('filterManager').value;
+        const selectedMonth = (activeMainTab === 'allowance' && ALLOWANCE_CONFIG.currMonth)
+          ? ALLOWANCE_CONFIG.currMonth
+          : document.getElementById('filterMonth').value;
+        const shift = document.getElementById('filterShift').value;
+        const drillMonth = (activeMainTab === 'allowance' && ALLOWANCE_CONFIG.currMonth) ? ALLOWANCE_CONFIG.currMonth : selectedMonth;
+        renderDrilldownTable(city, district, drillMonth, shift, supervisor, manager);
+        const activeCode = document.getElementById('recActionFilter')?.value || 'ALL';
+        const labelMap = { 'UP': '🔺 建議調升津貼區域', 'KEEP': '🟢 建議維持現狀區域', 'DOWN': '🔽 建議調降津貼區域', 'NO_MAIN': '⛔ 未有主門市 (不放津貼)', 'ALL': '全部區域總覽' };
+        showActionToast('已更新建議類型篩選', `目前顯示：${labelMap[activeCode] || activeCode}`, 'info');
+      };
+
+      document.getElementById('allowanceCityFilter')?.addEventListener('change', () => {
+        syncAllowanceGeoDropdowns('CITY');
+        renderAllowanceDecisionTable();
+      });
+
+      document.getElementById('allowanceDistrictFilter')?.addEventListener('change', () => {
+        renderAllowanceDecisionTable();
+      });
+
+      document.getElementById('resetAllowanceLocalFiltersBtn')?.addEventListener('click', () => {
+        const cEl = document.getElementById('allowanceCityFilter');
+        const dEl = document.getElementById('allowanceDistrictFilter');
+        const aEl = document.getElementById('recActionFilter');
+        if (cEl) cEl.value = 'ALL';
+        syncAllowanceGeoDropdowns('CITY');
+        if (dEl) dEl.value = 'ALL';
+        if (aEl) aEl.value = 'ALL';
+        renderAllowanceDecisionTable();
+        showActionToast('✓ 已重置津貼規劃查詢條件', '顯示全區所有行政區津貼規劃', 'info');
+      });
+
+      document.getElementById('recActionFilter')?.addEventListener('change', () => {
+        renderAllowanceDecisionTable();
+        const city = document.getElementById('filterCity').value;
+        const district = document.getElementById('filterDistrict').value;
+        const supervisor = document.getElementById('filterSupervisor').value;
+        const manager = document.getElementById('filterManager').value;
+        const selectedMonth = (activeMainTab === 'allowance' && ALLOWANCE_CONFIG.currMonth)
+          ? ALLOWANCE_CONFIG.currMonth
+          : document.getElementById('filterMonth').value;
+        const shift = document.getElementById('filterShift').value;
+        const drillMonth = (activeMainTab === 'allowance' && ALLOWANCE_CONFIG.currMonth) ? ALLOWANCE_CONFIG.currMonth : selectedMonth;
+      renderDrilldownTable(city, district, drillMonth, shift, supervisor, manager);
+      });
+
+      document.getElementById('switchCompletedMonthBtn')?.addEventListener('click', () => {
+        const now = new Date();
+        const currentCalendarYM = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const completedPeriods = DB.periods.filter(p => p < currentCalendarYM);
+        if (completedPeriods.length > 0) {
+          const latestComp = completedPeriods[completedPeriods.length - 1];
+          const compIdx = DB.periods.indexOf(latestComp);
+          const prevComp = compIdx > 0 ? DB.periods[compIdx - 1] : '';
+          const currSelEl = document.getElementById('compBaseCurrSelect');
+          const prevSelEl = document.getElementById('compBasePrevSelect');
+          if (currSelEl) currSelEl.value = latestComp;
+          if (prevSelEl) prevSelEl.value = prevComp;
+          applyAllowanceParameters();
+        }
+      });
+
+      window.toggleManualUploadDrawer = function() {
+        const drawer = document.getElementById('manualDropWrapper');
+        const btnText = document.getElementById('toggleDropZoneBtnText');
+        const chevron = document.getElementById('toggleDropZoneChevron');
+        if (!drawer) return;
+        const isHidden = drawer.classList.toggle('hidden');
+        if (btnText) btnText.textContent = isHidden ? '展開手動 CSV 匯入' : '收起手動 CSV 匯入';
+        if (chevron) {
+          chevron.className = isHidden ? 'fa-solid fa-chevron-down text-[10px]' : 'fa-solid fa-chevron-up text-[10px]';
+        }
+      };
+
+      let isSidebarCollapsed = false;
+      window.toggleLeftSidebar = function() {
+        isSidebarCollapsed = !isSidebarCollapsed;
+        const aside = document.getElementById('leftSidebar');
+        const topIcon = document.getElementById('sidebarTopIcon');
+        const bottomIcon = document.getElementById('sidebarBottomIcon');
+        const labels = document.querySelectorAll('.sidebar-label');
+        const headerRow = document.getElementById('sidebarHeaderRow');
+
+        if (isSidebarCollapsed) {
+          aside?.classList.remove('md:w-56');
+          aside?.classList.add('md:w-[68px]');
+          labels.forEach(el => el.classList.add('md:hidden'));
+          if (headerRow) {
+            headerRow.classList.remove('justify-between');
+            headerRow.classList.add('justify-center');
+          }
+          if (topIcon) topIcon.className = 'fa-solid fa-angles-right text-xs';
+          if (bottomIcon) bottomIcon.className = 'fa-solid fa-angles-right text-xs';
+        } else {
+          aside?.classList.remove('md:w-[68px]');
+          aside?.classList.add('md:w-56');
+          labels.forEach(el => el.classList.remove('md:hidden'));
+          if (headerRow) {
+            headerRow.classList.remove('justify-center');
+            headerRow.classList.add('justify-between');
+          }
+          if (topIcon) topIcon.className = 'fa-solid fa-angles-left text-xs';
+          if (bottomIcon) bottomIcon.className = 'fa-solid fa-angles-left text-xs';
+        }
+      };
+
+      document.getElementById('toggleUploadBtn').addEventListener('click', () => {
+        toggleManualUploadDrawer();
+      });
+
+      document.getElementById('resetDemoBtn')?.addEventListener('click', () => {
         loadInitialDemoData();
       });
 
@@ -1907,35 +3627,44 @@
         document.getElementById('filterShift').value = 'ALL';
         document.getElementById('filterVendor').value = 'ALL';
         if (document.getElementById('tableSearchInput')) document.getElementById('tableSearchInput').value = '';
+        if (document.getElementById('clearTableSearchBtn')) document.getElementById('clearTableSearchBtn').classList.add('hidden');
         if (document.getElementById('tblFilterStatus')) document.getElementById('tblFilterStatus').value = 'ALL';
         updateFilterDropdowns('INIT');
         refreshDashboard();
+        showActionToast('✓ 已重置所有篩選條件', '恢復顯示全部縣市、行政區與人員資料', 'info');
       });
 
       // Top Filter Cascading Change Listeners
       document.getElementById('filterCity').addEventListener('change', () => {
         updateFilterDropdowns('CITY');
         refreshDashboard();
+        showActionToast('已套用篩選條件', '數據與圖表已即時更新', 'info');
       });
 
       document.getElementById('filterDistrict').addEventListener('change', () => {
         updateFilterDropdowns('DISTRICT');
         refreshDashboard();
+        showActionToast('已套用篩選條件', '數據與圖表已即時更新', 'info');
       });
       
       document.getElementById('filterSupervisor').addEventListener('change', () => {
         updateFilterDropdowns('SUPERVISOR');
         refreshDashboard();
+        showActionToast('已套用篩選條件', '數據與圖表已即時更新', 'info');
       });
 
       document.getElementById('filterManager').addEventListener('change', () => {
         updateFilterDropdowns('MANAGER');
         refreshDashboard();
+        showActionToast('已套用篩選條件', '數據與圖表已即時更新', 'info');
       });
 
-      document.getElementById('filterMonth').addEventListener('change', refreshDashboard);
-      document.getElementById('filterShift').addEventListener('change', refreshDashboard);
-      document.getElementById('filterVendor').addEventListener('change', refreshDashboard);
+      ['filterMonth', 'filterShift', 'filterVendor'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', () => {
+          refreshDashboard();
+          showActionToast('已套用篩選條件', '數據與圖表已即時更新', 'info');
+        });
+      });
 
       // --- Table-Level Slicers (雙向連動頂部篩選) ---
       const bindTableFilterSync = (tblId, topId, changeType) => {
@@ -1953,15 +3682,39 @@
       bindTableFilterSync('tblFilterSupervisor', 'filterSupervisor', 'SUPERVISOR');
       bindTableFilterSync('tblFilterManager', 'filterManager', 'MANAGER');
 
-      // Table-specific Search & Status Listeners
-      document.getElementById('tableSearchInput')?.addEventListener('input', () => {
+      window.clearTableSearchInput = function() {
+        const inputEl = document.getElementById('tableSearchInput');
+        const clearBtn = document.getElementById('clearTableSearchBtn');
+        if (inputEl) {
+          inputEl.value = '';
+          inputEl.focus();
+        }
+        if (clearBtn) clearBtn.classList.add('hidden');
         const city = document.getElementById('filterCity').value;
         const district = document.getElementById('filterDistrict').value;
         const supervisor = document.getElementById('filterSupervisor').value;
         const manager = document.getElementById('filterManager').value;
         const selectedMonth = document.getElementById('filterMonth').value;
         const shift = document.getElementById('filterShift').value;
-        renderDrilldownTable(city, district, selectedMonth, shift, supervisor, manager);
+        const drillMonth = (activeMainTab === 'allowance' && ALLOWANCE_CONFIG.currMonth) ? ALLOWANCE_CONFIG.currMonth : selectedMonth;
+        renderDrilldownTable(city, district, drillMonth, shift, supervisor, manager);
+      };
+
+      // Table-specific Search & Status Listeners
+      document.getElementById('tableSearchInput')?.addEventListener('input', (e) => {
+        const clearBtn = document.getElementById('clearTableSearchBtn');
+        if (clearBtn) {
+          if (e.target.value && e.target.value.length > 0) clearBtn.classList.remove('hidden');
+          else clearBtn.classList.add('hidden');
+        }
+        const city = document.getElementById('filterCity').value;
+        const district = document.getElementById('filterDistrict').value;
+        const supervisor = document.getElementById('filterSupervisor').value;
+        const manager = document.getElementById('filterManager').value;
+        const selectedMonth = document.getElementById('filterMonth').value;
+        const shift = document.getElementById('filterShift').value;
+        const drillMonth = (activeMainTab === 'allowance' && ALLOWANCE_CONFIG.currMonth) ? ALLOWANCE_CONFIG.currMonth : selectedMonth;
+        renderDrilldownTable(city, district, drillMonth, shift, supervisor, manager);
       });
 
       document.getElementById('tblFilterStatus')?.addEventListener('change', () => {
@@ -1971,7 +3724,8 @@
         const manager = document.getElementById('filterManager').value;
         const selectedMonth = document.getElementById('filterMonth').value;
         const shift = document.getElementById('filterShift').value;
-        renderDrilldownTable(city, district, selectedMonth, shift, supervisor, manager);
+        const drillMonth = (activeMainTab === 'allowance' && ALLOWANCE_CONFIG.currMonth) ? ALLOWANCE_CONFIG.currMonth : selectedMonth;
+      renderDrilldownTable(city, district, drillMonth, shift, supervisor, manager);
       });
     });
   </script>
